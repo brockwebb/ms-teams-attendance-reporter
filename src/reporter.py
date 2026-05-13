@@ -684,12 +684,11 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         { key: "total_duration_min", label: "Total (min)", numeric: true },
         { key: "avg_duration_min", label: "Avg (min)", numeric: true },
       ];
-  renderTable(document.getElementById("participant-table"), participantCols, DATA.participants);
-  document.getElementById("participant-count").textContent = `${DATA.participants.length} participants`;
 
-  // Search filter
+  // Single source of truth for the search filter: applied on every repaint
+  // (initial render, sort) so the active query survives a re-sort.
   const search = document.getElementById("participant-search");
-  search.addEventListener("input", () => {
+  function applyParticipantSearch() {
     const q = search.value.toLowerCase();
     let shown = 0;
     document.querySelectorAll("#participant-table tbody tr").forEach(row => {
@@ -698,19 +697,16 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       if (visible) shown += 1;
     });
     document.getElementById("participant-count").textContent =
-      `${shown} of ${DATA.participants.length} participants`;
-  });
+      q ? `${shown} of ${DATA.participants.length} participants`
+        : `${DATA.participants.length} participants`;
+  }
+  search.addEventListener("input", applyParticipantSearch);
+
+  renderTable(document.getElementById("participant-table"), participantCols,
+              DATA.participants, applyParticipantSearch);
 
   // ---- Table helpers ----
-  function renderTable(table, columns, rows) {
-    const thead = table.tHead.querySelector("tr");
-    thead.innerHTML = "";
-    columns.forEach((c, idx) => {
-      const th = document.createElement("th");
-      th.textContent = c.label;
-      th.addEventListener("click", () => sortBy(table, columns, rows, idx, c));
-      thead.appendChild(th);
-    });
+  function paintRows(table, columns, rows) {
     const tbody = table.tBodies[0];
     tbody.innerHTML = "";
     rows.forEach(r => {
@@ -726,7 +722,20 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     });
   }
 
-  function sortBy(table, columns, rows, idx, col) {
+  function renderTable(table, columns, rows, afterRender) {
+    const thead = table.tHead.querySelector("tr");
+    thead.innerHTML = "";
+    columns.forEach((c, idx) => {
+      const th = document.createElement("th");
+      th.textContent = c.label;
+      th.addEventListener("click", () => sortBy(table, columns, rows, idx, c, afterRender));
+      thead.appendChild(th);
+    });
+    paintRows(table, columns, rows);
+    if (afterRender) afterRender();
+  }
+
+  function sortBy(table, columns, rows, idx, col, afterRender) {
     const thead = table.tHead.querySelector("tr");
     const th = thead.children[idx];
     const current = th.dataset.sort;
@@ -740,19 +749,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       if (col.numeric) return ((av || 0) - (bv || 0)) * direction;
       return String(av || "").localeCompare(String(bv || "")) * direction;
     });
-    const tbody = table.tBodies[0];
-    tbody.innerHTML = "";
-    sorted.forEach(r => {
-      const tr = document.createElement("tr");
-      columns.forEach(c => {
-        const td = document.createElement("td");
-        const v = r[c.key];
-        td.textContent = (v === null || v === undefined) ? "" : v;
-        if (c.numeric) td.style.textAlign = "right";
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
+    paintRows(table, columns, sorted);
+    if (afterRender) afterRender();
   }
 })();
 </script>
