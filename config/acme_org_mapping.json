@@ -1,13 +1,13 @@
 {
-  "_comment": "Synthetic org mapping. ACME mirrors Census structure for testing.",
-  "org_name": "ACME",
+  "_comment": "Synthetic org mapping. ACNE (legally-distinct ACME parody) mirrors Census structure for testing.",
+  "org_name": "ACNE",
   "org_labels": {
     "level_1": "Agency",
     "level_2": "Directorate",
     "level_3": "Division",
     "employee_type": "Status"
   },
-  "name_pattern": "^(.+?)\\s*\\(ACME/(\\S+)\\s+(EMP|CTR)\\)\\s*$",
+  "name_pattern": "^(.+?)\\s*\\(ACNE/(\\S+)\\s+(EMP|CTR)\\)\\s*$",
   "major_orgs": {
     "ROCKETWORKS": {
       "direct_codes": ["RKTW"],

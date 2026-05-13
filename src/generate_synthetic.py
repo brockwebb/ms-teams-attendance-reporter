@@ -9,10 +9,10 @@ Produces tab-delimited CSV files matching the MS Teams attendance export format:
     is responsible for merging them back; the generator must produce the
     real-world mismatch (15-column header vs. 17-column data rows).
 
-Characters are Looney Tunes themed (ACME Corp) — ~50 named characters across
-4 directorates and 14 sub-orgs, plus 3 "MS Trainers" who appear with no org
-parenthetical. The trainers exist so the parser's drop-non-org logic has
-something to drop.
+Characters are legally-distinct Looney-Tunes parodies (ACNE Corp) — ~50 named
+characters across 4 directorates and 14 sub-orgs, plus 3 "MS Trainers" who
+appear with no org parenthetical. The trainers exist so the parser's
+drop-non-org logic has something to drop.
 
 Run:
     python src/generate_synthetic.py [--out-dir data/synthetic] [--seed 42]
@@ -27,64 +27,64 @@ from pathlib import Path
 # (display_name, "MAJOR/SUB" or "MAJOR/<direct_code>", "EMP"|"CTR")
 CHARACTERS = [
     # ROCKETWORKS
-    ("Wile E. Coyote",        "ROCKETWORKS/ANVIL",   "EMP"),
-    ("Road Runner",           "ROCKETWORKS/ANVIL",   "EMP"),
-    ("Yosemite Sam",          "ROCKETWORKS/ANVIL",   "EMP"),
-    ("Marvin Martian",        "ROCKETWORKS/ANVIL",   "CTR"),
-    ("Sylvester Pussycat",    "ROCKETWORKS/BOOM",    "EMP"),
-    ("Tweety Bird",           "ROCKETWORKS/BOOM",    "EMP"),
-    ("Foghorn Leghorn",       "ROCKETWORKS/BOOM",    "CTR"),
-    ("Speedy Gonzales",       "ROCKETWORKS/JETPK",   "EMP"),
-    ("Slowpoke Rodriguez",    "ROCKETWORKS/JETPK",   "EMP"),
-    ("Gonzales Jr",           "ROCKETWORKS/JETPK",   "CTR"),
-    ("Pepe Le Pew",           "ROCKETWORKS/PAINT",   "EMP"),
-    ("Penelope Pussycat",     "ROCKETWORKS/PAINT",   "EMP"),
-    ("Elmer Fudd",            "ROCKETWORKS/TRAPS",   "EMP"),
-    ("Tasmanian Devil",       "ROCKETWORKS/TRAPS",   "EMP"),
-    ("Witch Hazel",           "ROCKETWORKS/TRAPS",   "CTR"),
-    ("Granny",                "ROCKETWORKS/RKTW",    "EMP"),  # direct code
+    ("Wily D. Coydog",         "ROCKETWORKS/ANVIL",   "EMP"),
+    ("Street Sprinter",        "ROCKETWORKS/ANVIL",   "EMP"),
+    ("Yellowstone Stan",       "ROCKETWORKS/ANVIL",   "EMP"),
+    ("Melvin Venusian",        "ROCKETWORKS/ANVIL",   "CTR"),
+    ("Salvador Housecat",      "ROCKETWORKS/BOOM",    "EMP"),
+    ("Tweetie Birb",           "ROCKETWORKS/BOOM",    "EMP"),
+    ("Foghat Rooster",         "ROCKETWORKS/BOOM",    "CTR"),
+    ("Zippy Gonzalez",         "ROCKETWORKS/JETPK",   "EMP"),
+    ("Pokeyboy Rodrigo",       "ROCKETWORKS/JETPK",   "EMP"),
+    ("Gonzalez Junior",        "ROCKETWORKS/JETPK",   "CTR"),
+    ("Pierre Le Phew",         "ROCKETWORKS/PAINT",   "EMP"),
+    ("Priscilla Kittycat",     "ROCKETWORKS/PAINT",   "EMP"),
+    ("Elroy Fuzz",             "ROCKETWORKS/TRAPS",   "EMP"),
+    ("Taswegian Demon",        "ROCKETWORKS/TRAPS",   "EMP"),
+    ("Witch Hickory",          "ROCKETWORKS/TRAPS",   "CTR"),
+    ("Nana",                   "ROCKETWORKS/RKTW",    "EMP"),  # direct code
 
     # TOONOPS
-    ("Bugs Bunny",            "TOONOPS/CHASE",       "EMP"),
-    ("Daffy Duck",            "TOONOPS/CHASE",       "EMP"),
-    ("Porky Pig",             "TOONOPS/CHASE",       "EMP"),
-    ("Lola Bunny",            "TOONOPS/CHASE",       "CTR"),
-    ("Michigan J. Frog",      "TOONOPS/STUNT",       "EMP"),
-    ("Gossamer",              "TOONOPS/STUNT",       "EMP"),
-    ("Hugo the Abominable",   "TOONOPS/STUNT",       "CTR"),
-    ("Wile E. Coyote Jr",     "TOONOPS/PROPS",       "EMP"),
-    ("Barnyard Dawg",         "TOONOPS/PROPS",       "EMP"),
-    ("Henery Hawk",           "TOONOPS/PROPS",       "CTR"),
-    ("Bugs Bunny Sr",         "TOONOPS/TOPS",        "EMP"),  # direct code
+    ("Bugz Rabbit",            "TOONOPS/CHASE",       "EMP"),
+    ("Dappy Goose",            "TOONOPS/CHASE",       "EMP"),
+    ("Bork E. Hog",            "TOONOPS/CHASE",       "EMP"),
+    ("Lulu Hare",              "TOONOPS/CHASE",       "CTR"),
+    ("Wisconsin K. Toad",      "TOONOPS/STUNT",       "EMP"),
+    ("Fuzzmonster",            "TOONOPS/STUNT",       "EMP"),
+    ("Yugo the Tolerable",     "TOONOPS/STUNT",       "CTR"),
+    ("Wily D. Coydog Jr",      "TOONOPS/PROPS",       "EMP"),
+    ("Farmstead Mutt",         "TOONOPS/PROPS",       "EMP"),
+    ("Henry Falcon",           "TOONOPS/PROPS",       "CTR"),
+    ("Bugz Rabbit Sr",         "TOONOPS/TOPS",        "EMP"),  # direct code
 
     # ACMELABS
-    ("Brain",                 "ACMELABS/BRAIN",      "EMP"),
-    ("Pinky",                 "ACMELABS/BRAIN",      "EMP"),
-    ("Snowball",              "ACMELABS/BRAIN",      "CTR"),
-    ("Chicken Hawk",          "ACMELABS/GENETICS",   "EMP"),
-    ("Egghead Jr",            "ACMELABS/GENETICS",   "EMP"),
-    ("Dr. I.Q. Hi",           "ACMELABS/QUANTUM",    "EMP"),
-    ("Instant Martian",       "ACMELABS/QUANTUM",    "CTR"),
-    ("Beaker",                "ACMELABS/LABS",       "EMP"),  # direct code
+    ("Cortex",                 "ACMELABS/BRAIN",      "EMP"),
+    ("Blinky",                 "ACMELABS/BRAIN",      "EMP"),
+    ("Slushball",              "ACMELABS/BRAIN",      "CTR"),
+    ("Turkey Vulture",         "ACMELABS/GENETICS",   "EMP"),
+    ("Noggin Jr",              "ACMELABS/GENETICS",   "EMP"),
+    ("Dr. E.Q. High",          "ACMELABS/QUANTUM",    "EMP"),
+    ("Minute Venusian",        "ACMELABS/QUANTUM",    "CTR"),
+    ("Flask",                  "ACMELABS/LABS",       "EMP"),  # direct code
 
     # ADMIN
-    ("Granny Smith",          "ADMIN/HR",            "EMP"),
-    ("Miss Prissy",           "ADMIN/HR",            "EMP"),
-    ("Lawyer Falcon",         "ADMIN/LEGAL",         "EMP"),
-    ("Pete Puma",             "ADMIN/LEGAL",         "CTR"),
-    ("Counting Cat",          "ADMIN/FINANCE",       "EMP"),
-    ("Penny Penguin",         "ADMIN/FINANCE",       "EMP"),
-    ("Cecil Turtle",          "ADMIN/ADMN",          "EMP"),  # direct code
+    ("Nana McIntosh",          "ADMIN/HR",            "EMP"),
+    ("Ms. Fussy",              "ADMIN/HR",            "EMP"),
+    ("Attorney Hawk",          "ADMIN/LEGAL",         "EMP"),
+    ("Pat Cougar",             "ADMIN/LEGAL",         "CTR"),
+    ("Tally Tabby",            "ADMIN/FINANCE",       "EMP"),
+    ("Nickel Puffin",          "ADMIN/FINANCE",       "EMP"),
+    ("Cedric Tortoise",        "ADMIN/ADMN",          "EMP"),  # direct code
 
-    # Padding to 50 named characters
-    ("Buster Bunny",          "TOONOPS/CHASE",       "EMP"),
-    ("Babs Bunny",            "TOONOPS/CHASE",       "EMP"),
-    ("Plucky Duck",           "TOONOPS/CHASE",       "CTR"),
-    ("Hampton Pig",           "TOONOPS/PROPS",       "EMP"),
-    ("Fifi La Fume",          "ROCKETWORKS/PAINT",   "CTR"),
-    ("Calamity Coyote",       "ROCKETWORKS/ANVIL",   "EMP"),
-    ("Little Beeper",         "ROCKETWORKS/JETPK",   "CTR"),
-    ("Furrball",              "ACMELABS/BRAIN",      "EMP"),
+    # Padding to 50 named characters (Tiny Toons → Teeny Cartoons parodies)
+    ("Blaster Rabbit",         "TOONOPS/CHASE",       "EMP"),
+    ("Babs Hare",              "TOONOPS/CHASE",       "EMP"),
+    ("Lucky Goose",            "TOONOPS/CHASE",       "CTR"),
+    ("Hamilton Boar",          "TOONOPS/PROPS",       "EMP"),
+    ("Gigi La Stink",          "ROCKETWORKS/PAINT",   "CTR"),
+    ("Catastrophe Coydog",     "ROCKETWORKS/ANVIL",   "EMP"),
+    ("Tiny Honker",            "ROCKETWORKS/JETPK",   "CTR"),
+    ("Fuzzball",               "ACMELABS/BRAIN",      "EMP"),
 ]
 assert len(CHARACTERS) == 50, f"expected 50 named characters, got {len(CHARACTERS)}"
 
@@ -95,8 +95,8 @@ MS_TRAINERS = [
     "MS Learning Facilitator",
 ]
 
-CHAMPIONS = {"Bugs Bunny", "Wile E. Coyote", "Brain", "Granny", "Cecil Turtle"}
-RELUCTANT = {"Yosemite Sam", "Tasmanian Devil", "Gossamer", "Pete Puma"}
+CHAMPIONS = {"Bugz Rabbit", "Wily D. Coydog", "Cortex", "Nana", "Cedric Tortoise"}
+RELUCTANT = {"Yellowstone Stan", "Taswegian Demon", "Fuzzmonster", "Pat Cougar"}
 
 HEADER_COLUMNS = [
     "Name",
@@ -150,7 +150,7 @@ MEETINGS = [
 
 def format_name(name: str, org_path: str, status: str) -> str:
     sub = org_path.split("/")[1] if "/" in org_path else org_path
-    return f"{name} (ACME/{sub} {status})"
+    return f"{name} (ACNE/{sub} {status})"
 
 
 def fmt_date(dt: datetime) -> str:
@@ -177,7 +177,7 @@ def fmt_duration(seconds: float) -> str:
 
 def email_for(name: str) -> str:
     slug = name.strip().lower().replace(".", "").replace("  ", " ").replace(" ", ".")
-    return f"{slug}@acme.test"
+    return f"{slug}@acne.test"
 
 
 def engagement_row(rng: random.Random) -> list[int]:
@@ -286,7 +286,7 @@ def generate_meeting(meeting: dict, rng: random.Random) -> str:
     for char_name, org_path, status in attendees:
         sessions = generate_sessions(meeting["start"], meeting["duration_min"], rng)
         display_name = format_name(char_name, org_path, status)
-        role = "Organizer" if char_name == "Bugs Bunny" else "Attendee"
+        role = "Organizer" if char_name == "Bugz Rabbit" else "Attendee"
         for join, leave in sessions:
             participant_rows.append([
                 display_name,

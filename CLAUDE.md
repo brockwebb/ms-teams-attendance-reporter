@@ -6,7 +6,7 @@ A config-driven Python pipeline that processes MS Teams meeting attendance CSV e
 ## Architecture
 ```
 data/raw/          → Drop raw Teams attendance CSVs here (gitignored, real data)
-data/synthetic/    → Synthetic test data (Looney Tunes themed, committed to repo)
+data/synthetic/    → Synthetic test data (Looney-Tunes-parody themed, committed to repo)
 data/processed/    → Pipeline output (gitignored)
 config/            → Org mapping, column config, synthetic data generation config
 src/               → Python source: preprocessor, report generator, synthetic data generator
@@ -54,8 +54,8 @@ The pipeline should be reusable beyond Census. Key config points:
 - Column names configurable so other orgs can swap labels
 
 ## Synthetic Data
-Looney Tunes themed. 50 characters across org units:
-- Top-level org: "ACME" (analogous to "CENSUS")
+Looney-Tunes parody themed — legally-distinct names (ACNE = ACME parody, "Bugz Rabbit" not "Bugs Bunny", etc.). 50 characters across org units:
+- Top-level org: "ACNE" (analogous to "CENSUS"; legally-distinct ACME parody)
 - Major orgs with sub-orgs mimicking Census structure
 - Mix of EMP and CTR designations
 - Realistic attendance patterns: some full-session, some partial, some drop/reconnect

@@ -7,42 +7,42 @@ Average attendance time	42m 48s
 
 2. Participants
 Name	First Join	Last Leave	In-Meeting Duration	Email	Participant ID (UPN)	Role	Engagement: Reaction-Applause	Engagement: Reaction-Laugh	Engagement: Reaction-Like	Engagement: Reaction-Love	Engagement: Reaction-Surprised	Engagement: Camera On	Engagement: Raise Hands	Engagement: Unmute
-MS Learning Facilitator	5/13/2026	12:57:00 PM	5/13/2026	1:56:00 PM	59m 0s	ms.learning.facilitator@acme.test	ms.learning.facilitator@acme.test	Presenter	0	0	0	0	0	0	0	0
-Copilot Support Team	5/13/2026	12:56:00 PM	5/13/2026	1:57:00 PM	1h 1m 0s	copilot.support.team@acme.test	copilot.support.team@acme.test	Presenter	0	0	0	0	0	1	0	0
-Bugs Bunny (ACME/CHASE EMP)	5/13/2026	1:00:37 PM	5/13/2026	1:52:42 PM	52m 5s	bugs.bunny@acme.test	bugs.bunny@acme.test	Organizer	1	0	0	0	0	1	0	0
-Wile E. Coyote (ACME/ANVIL EMP)	5/13/2026	1:00:08 PM	5/13/2026	1:54:27 PM	54m 19s	wile.e.coyote@acme.test	wile.e.coyote@acme.test	Attendee	0	1	1	0	0	0	1	0
-Cecil Turtle (ACME/ADMN EMP)	5/13/2026	1:00:03 PM	5/13/2026	1:50:13 PM	50m 10s	cecil.turtle@acme.test	cecil.turtle@acme.test	Attendee	0	0	0	0	0	1	0	0
-Brain (ACME/BRAIN EMP)	5/13/2026	1:01:52 PM	5/13/2026	1:25:52 PM	24m 0s	brain@acme.test	brain@acme.test	Attendee	0	0	0	0	0	1	0	1
-Granny (ACME/RKTW EMP)	5/13/2026	1:10:00 PM	5/13/2026	1:52:06 PM	42m 6s	granny@acme.test	granny@acme.test	Attendee	0	0	0	0	0	0	0	0
-Henery Hawk (ACME/PROPS CTR)	5/13/2026	1:16:00 PM	5/13/2026	1:18:38 PM	2m 38s	henery.hawk@acme.test	henery.hawk@acme.test	Attendee	0	0	0	0	0	0	0	0
-Wile E. Coyote Jr (ACME/PROPS EMP)	5/13/2026	1:01:15 PM	5/13/2026	1:55:00 PM	53m 45s	wile.e.coyote.jr@acme.test	wile.e.coyote.jr@acme.test	Attendee	0	0	0	0	1	1	0	0
-Lola Bunny (ACME/CHASE CTR)	5/13/2026	12:59:20 PM	5/13/2026	1:54:17 PM	54m 57s	lola.bunny@acme.test	lola.bunny@acme.test	Attendee	0	0	2	0	0	1	1	0
-Penelope Pussycat (ACME/PAINT EMP)	5/13/2026	1:01:35 PM	5/13/2026	1:51:24 PM	49m 49s	penelope.pussycat@acme.test	penelope.pussycat@acme.test	Attendee	1	1	0	0	0	0	0	0
-Sylvester Pussycat (ACME/BOOM EMP)	5/13/2026	1:24:00 PM	5/13/2026	1:54:30 PM	30m 30s	sylvester.pussycat@acme.test	sylvester.pussycat@acme.test	Attendee	0	0	0	0	0	0	0	0
-Hampton Pig (ACME/PROPS EMP)	5/13/2026	12:59:08 PM	5/13/2026	1:52:11 PM	53m 3s	hampton.pig@acme.test	hampton.pig@acme.test	Attendee	0	0	0	0	0	1	0	0
-Bugs Bunny Sr (ACME/TOPS EMP)	5/13/2026	1:06:56 PM	5/13/2026	1:32:56 PM	26m 0s	bugs.bunny.sr@acme.test	bugs.bunny.sr@acme.test	Attendee	0	0	0	0	0	0	0	0
-Gonzales Jr (ACME/JETPK CTR)	5/13/2026	1:00:26 PM	5/13/2026	1:54:05 PM	53m 39s	gonzales.jr@acme.test	gonzales.jr@acme.test	Attendee	0	0	0	0	0	0	1	0
-Snowball (ACME/BRAIN CTR)	5/13/2026	1:13:00 PM	5/13/2026	1:54:48 PM	41m 48s	snowball@acme.test	snowball@acme.test	Attendee	0	0	0	0	0	0	0	0
-Egghead Jr (ACME/GENETICS EMP)	5/13/2026	1:11:00 PM	5/13/2026	1:54:18 PM	43m 18s	egghead.jr@acme.test	egghead.jr@acme.test	Attendee	0	1	0	0	0	0	1	1
-Elmer Fudd (ACME/TRAPS EMP)	5/13/2026	1:01:04 PM	5/13/2026	1:53:41 PM	52m 37s	elmer.fudd@acme.test	elmer.fudd@acme.test	Attendee	0	0	0	0	0	0	0	0
-Marvin Martian (ACME/ANVIL CTR)	5/13/2026	1:04:31 PM	5/13/2026	1:19:31 PM	15m 0s	marvin.martian@acme.test	marvin.martian@acme.test	Attendee	0	0	0	0	0	0	0	0
-Marvin Martian (ACME/ANVIL CTR)	5/13/2026	1:21:31 PM	5/13/2026	1:52:50 PM	31m 19s	marvin.martian@acme.test	marvin.martian@acme.test	Attendee	0	0	0	0	0	1	0	0
-Counting Cat (ACME/FINANCE EMP)	5/13/2026	1:00:41 PM	5/13/2026	1:53:53 PM	53m 12s	counting.cat@acme.test	counting.cat@acme.test	Attendee	0	0	0	0	0	0	1	1
-Pepe Le Pew (ACME/PAINT EMP)	5/13/2026	12:59:54 PM	5/13/2026	1:50:41 PM	50m 47s	pepe.le.pew@acme.test	pepe.le.pew@acme.test	Attendee	0	1	1	0	0	0	0	0
-Barnyard Dawg (ACME/PROPS EMP)	5/13/2026	1:09:01 PM	5/13/2026	1:29:01 PM	20m 0s	barnyard.dawg@acme.test	barnyard.dawg@acme.test	Attendee	0	0	1	0	0	0	0	0
-Granny Smith (ACME/HR EMP)	5/13/2026	1:00:12 PM	5/13/2026	1:53:13 PM	53m 1s	granny.smith@acme.test	granny.smith@acme.test	Attendee	0	0	0	0	0	1	0	0
-Babs Bunny (ACME/CHASE EMP)	5/13/2026	1:00:10 PM	5/13/2026	1:54:38 PM	54m 28s	babs.bunny@acme.test	babs.bunny@acme.test	Attendee	0	0	0	0	0	1	0	0
-Porky Pig (ACME/CHASE EMP)	5/13/2026	1:01:56 PM	5/13/2026	1:53:44 PM	51m 48s	porky.pig@acme.test	porky.pig@acme.test	Attendee	0	0	0	0	0	0	0	1
-Instant Martian (ACME/QUANTUM CTR)	5/13/2026	1:21:00 PM	5/13/2026	1:54:07 PM	33m 7s	instant.martian@acme.test	instant.martian@acme.test	Attendee	0	0	0	0	0	1	0	1
-Little Beeper (ACME/JETPK CTR)	5/13/2026	12:59:41 PM	5/13/2026	1:53:30 PM	53m 49s	little.beeper@acme.test	little.beeper@acme.test	Attendee	0	0	0	0	0	1	0	1
-Chicken Hawk (ACME/GENETICS EMP)	5/13/2026	1:01:59 PM	5/13/2026	1:54:05 PM	52m 6s	chicken.hawk@acme.test	chicken.hawk@acme.test	Attendee	0	0	0	0	0	0	0	1
-Pinky (ACME/BRAIN EMP)	5/13/2026	1:01:48 PM	5/13/2026	1:53:22 PM	51m 34s	pinky@acme.test	pinky@acme.test	Attendee	0	0	0	0	0	0	0	1
-Michigan J. Frog (ACME/STUNT EMP)	5/13/2026	12:59:07 PM	5/13/2026	1:54:01 PM	54m 54s	michigan.j.frog@acme.test	michigan.j.frog@acme.test	Attendee	0	0	0	1	0	1	0	1
-Hugo the Abominable (ACME/STUNT CTR)	5/13/2026	1:01:10 PM	5/13/2026	1:54:01 PM	52m 51s	hugo.the.abominable@acme.test	hugo.the.abominable@acme.test	Attendee	0	0	0	0	0	1	0	0
-Buster Bunny (ACME/CHASE EMP)	5/13/2026	1:03:21 PM	5/13/2026	1:34:21 PM	31m 0s	buster.bunny@acme.test	buster.bunny@acme.test	Attendee	0	1	1	0	0	0	1	0
-Fifi La Fume (ACME/PAINT CTR)	5/13/2026	1:05:34 PM	5/13/2026	1:37:34 PM	32m 0s	fifi.la.fume@acme.test	fifi.la.fume@acme.test	Attendee	0	0	0	0	0	1	0	0
-Miss Prissy (ACME/HR EMP)	5/13/2026	12:59:00 PM	5/13/2026	1:52:25 PM	53m 25s	miss.prissy@acme.test	miss.prissy@acme.test	Attendee	0	0	0	0	0	0	0	0
-Dr. I.Q. Hi (ACME/QUANTUM EMP)	5/13/2026	1:01:26 PM	5/13/2026	1:13:26 PM	12m 0s	dr.iq.hi@acme.test	dr.iq.hi@acme.test	Attendee	0	0	0	0	0	0	0	0
-Dr. I.Q. Hi (ACME/QUANTUM EMP)	5/13/2026	1:17:26 PM	5/13/2026	1:52:49 PM	35m 23s	dr.iq.hi@acme.test	dr.iq.hi@acme.test	Attendee	0	1	0	0	0	1	0	0
-Plucky Duck (ACME/CHASE CTR)	5/13/2026	1:00:42 PM	5/13/2026	1:52:56 PM	52m 14s	plucky.duck@acme.test	plucky.duck@acme.test	Attendee	0	0	1	0	0	1	0	1
-Furrball (ACME/BRAIN EMP)	5/13/2026	1:07:55 PM	5/13/2026	1:28:55 PM	21m 0s	furrball@acme.test	furrball@acme.test	Attendee	0	0	0	0	0	0	0	0
+MS Learning Facilitator	5/13/2026	12:57:00 PM	5/13/2026	1:56:00 PM	59m 0s	ms.learning.facilitator@acne.test	ms.learning.facilitator@acne.test	Presenter	0	0	0	0	0	0	0	0
+Copilot Support Team	5/13/2026	12:56:00 PM	5/13/2026	1:57:00 PM	1h 1m 0s	copilot.support.team@acne.test	copilot.support.team@acne.test	Presenter	0	0	0	0	0	1	0	0
+Bugz Rabbit (ACNE/CHASE EMP)	5/13/2026	1:00:37 PM	5/13/2026	1:52:42 PM	52m 5s	bugz.rabbit@acne.test	bugz.rabbit@acne.test	Organizer	1	0	0	0	0	1	0	0
+Wily D. Coydog (ACNE/ANVIL EMP)	5/13/2026	1:00:08 PM	5/13/2026	1:54:27 PM	54m 19s	wily.d.coydog@acne.test	wily.d.coydog@acne.test	Attendee	0	1	1	0	0	0	1	0
+Cedric Tortoise (ACNE/ADMN EMP)	5/13/2026	1:00:03 PM	5/13/2026	1:50:13 PM	50m 10s	cedric.tortoise@acne.test	cedric.tortoise@acne.test	Attendee	0	0	0	0	0	1	0	0
+Cortex (ACNE/BRAIN EMP)	5/13/2026	1:01:52 PM	5/13/2026	1:25:52 PM	24m 0s	cortex@acne.test	cortex@acne.test	Attendee	0	0	0	0	0	1	0	1
+Nana (ACNE/RKTW EMP)	5/13/2026	1:10:00 PM	5/13/2026	1:52:06 PM	42m 6s	nana@acne.test	nana@acne.test	Attendee	0	0	0	0	0	0	0	0
+Henry Falcon (ACNE/PROPS CTR)	5/13/2026	1:16:00 PM	5/13/2026	1:18:38 PM	2m 38s	henry.falcon@acne.test	henry.falcon@acne.test	Attendee	0	0	0	0	0	0	0	0
+Wily D. Coydog Jr (ACNE/PROPS EMP)	5/13/2026	1:01:15 PM	5/13/2026	1:55:00 PM	53m 45s	wily.d.coydog.jr@acne.test	wily.d.coydog.jr@acne.test	Attendee	0	0	0	0	1	1	0	0
+Lulu Hare (ACNE/CHASE CTR)	5/13/2026	12:59:20 PM	5/13/2026	1:54:17 PM	54m 57s	lulu.hare@acne.test	lulu.hare@acne.test	Attendee	0	0	2	0	0	1	1	0
+Priscilla Kittycat (ACNE/PAINT EMP)	5/13/2026	1:01:35 PM	5/13/2026	1:51:24 PM	49m 49s	priscilla.kittycat@acne.test	priscilla.kittycat@acne.test	Attendee	1	1	0	0	0	0	0	0
+Salvador Housecat (ACNE/BOOM EMP)	5/13/2026	1:24:00 PM	5/13/2026	1:54:30 PM	30m 30s	salvador.housecat@acne.test	salvador.housecat@acne.test	Attendee	0	0	0	0	0	0	0	0
+Hamilton Boar (ACNE/PROPS EMP)	5/13/2026	12:59:08 PM	5/13/2026	1:52:11 PM	53m 3s	hamilton.boar@acne.test	hamilton.boar@acne.test	Attendee	0	0	0	0	0	1	0	0
+Bugz Rabbit Sr (ACNE/TOPS EMP)	5/13/2026	1:06:56 PM	5/13/2026	1:32:56 PM	26m 0s	bugz.rabbit.sr@acne.test	bugz.rabbit.sr@acne.test	Attendee	0	0	0	0	0	0	0	0
+Gonzalez Junior (ACNE/JETPK CTR)	5/13/2026	1:00:26 PM	5/13/2026	1:54:05 PM	53m 39s	gonzalez.junior@acne.test	gonzalez.junior@acne.test	Attendee	0	0	0	0	0	0	1	0
+Slushball (ACNE/BRAIN CTR)	5/13/2026	1:13:00 PM	5/13/2026	1:54:48 PM	41m 48s	slushball@acne.test	slushball@acne.test	Attendee	0	0	0	0	0	0	0	0
+Noggin Jr (ACNE/GENETICS EMP)	5/13/2026	1:11:00 PM	5/13/2026	1:54:18 PM	43m 18s	noggin.jr@acne.test	noggin.jr@acne.test	Attendee	0	1	0	0	0	0	1	1
+Elroy Fuzz (ACNE/TRAPS EMP)	5/13/2026	1:01:04 PM	5/13/2026	1:53:41 PM	52m 37s	elroy.fuzz@acne.test	elroy.fuzz@acne.test	Attendee	0	0	0	0	0	0	0	0
+Melvin Venusian (ACNE/ANVIL CTR)	5/13/2026	1:04:31 PM	5/13/2026	1:19:31 PM	15m 0s	melvin.venusian@acne.test	melvin.venusian@acne.test	Attendee	0	0	0	0	0	0	0	0
+Melvin Venusian (ACNE/ANVIL CTR)	5/13/2026	1:21:31 PM	5/13/2026	1:52:50 PM	31m 19s	melvin.venusian@acne.test	melvin.venusian@acne.test	Attendee	0	0	0	0	0	1	0	0
+Tally Tabby (ACNE/FINANCE EMP)	5/13/2026	1:00:41 PM	5/13/2026	1:53:53 PM	53m 12s	tally.tabby@acne.test	tally.tabby@acne.test	Attendee	0	0	0	0	0	0	1	1
+Pierre Le Phew (ACNE/PAINT EMP)	5/13/2026	12:59:54 PM	5/13/2026	1:50:41 PM	50m 47s	pierre.le.phew@acne.test	pierre.le.phew@acne.test	Attendee	0	1	1	0	0	0	0	0
+Farmstead Mutt (ACNE/PROPS EMP)	5/13/2026	1:09:01 PM	5/13/2026	1:29:01 PM	20m 0s	farmstead.mutt@acne.test	farmstead.mutt@acne.test	Attendee	0	0	1	0	0	0	0	0
+Nana McIntosh (ACNE/HR EMP)	5/13/2026	1:00:12 PM	5/13/2026	1:53:13 PM	53m 1s	nana.mcintosh@acne.test	nana.mcintosh@acne.test	Attendee	0	0	0	0	0	1	0	0
+Babs Hare (ACNE/CHASE EMP)	5/13/2026	1:00:10 PM	5/13/2026	1:54:38 PM	54m 28s	babs.hare@acne.test	babs.hare@acne.test	Attendee	0	0	0	0	0	1	0	0
+Bork E. Hog (ACNE/CHASE EMP)	5/13/2026	1:01:56 PM	5/13/2026	1:53:44 PM	51m 48s	bork.e.hog@acne.test	bork.e.hog@acne.test	Attendee	0	0	0	0	0	0	0	1
+Minute Venusian (ACNE/QUANTUM CTR)	5/13/2026	1:21:00 PM	5/13/2026	1:54:07 PM	33m 7s	minute.venusian@acne.test	minute.venusian@acne.test	Attendee	0	0	0	0	0	1	0	1
+Tiny Honker (ACNE/JETPK CTR)	5/13/2026	12:59:41 PM	5/13/2026	1:53:30 PM	53m 49s	tiny.honker@acne.test	tiny.honker@acne.test	Attendee	0	0	0	0	0	1	0	1
+Turkey Vulture (ACNE/GENETICS EMP)	5/13/2026	1:01:59 PM	5/13/2026	1:54:05 PM	52m 6s	turkey.vulture@acne.test	turkey.vulture@acne.test	Attendee	0	0	0	0	0	0	0	1
+Blinky (ACNE/BRAIN EMP)	5/13/2026	1:01:48 PM	5/13/2026	1:53:22 PM	51m 34s	blinky@acne.test	blinky@acne.test	Attendee	0	0	0	0	0	0	0	1
+Wisconsin K. Toad (ACNE/STUNT EMP)	5/13/2026	12:59:07 PM	5/13/2026	1:54:01 PM	54m 54s	wisconsin.k.toad@acne.test	wisconsin.k.toad@acne.test	Attendee	0	0	0	1	0	1	0	1
+Yugo the Tolerable (ACNE/STUNT CTR)	5/13/2026	1:01:10 PM	5/13/2026	1:54:01 PM	52m 51s	yugo.the.tolerable@acne.test	yugo.the.tolerable@acne.test	Attendee	0	0	0	0	0	1	0	0
+Blaster Rabbit (ACNE/CHASE EMP)	5/13/2026	1:03:21 PM	5/13/2026	1:34:21 PM	31m 0s	blaster.rabbit@acne.test	blaster.rabbit@acne.test	Attendee	0	1	1	0	0	0	1	0
+Gigi La Stink (ACNE/PAINT CTR)	5/13/2026	1:05:34 PM	5/13/2026	1:37:34 PM	32m 0s	gigi.la.stink@acne.test	gigi.la.stink@acne.test	Attendee	0	0	0	0	0	1	0	0
+Ms. Fussy (ACNE/HR EMP)	5/13/2026	12:59:00 PM	5/13/2026	1:52:25 PM	53m 25s	ms.fussy@acne.test	ms.fussy@acne.test	Attendee	0	0	0	0	0	0	0	0
+Dr. E.Q. High (ACNE/QUANTUM EMP)	5/13/2026	1:01:26 PM	5/13/2026	1:13:26 PM	12m 0s	dr.eq.high@acne.test	dr.eq.high@acne.test	Attendee	0	0	0	0	0	0	0	0
+Dr. E.Q. High (ACNE/QUANTUM EMP)	5/13/2026	1:17:26 PM	5/13/2026	1:52:49 PM	35m 23s	dr.eq.high@acne.test	dr.eq.high@acne.test	Attendee	0	1	0	0	0	1	0	0
+Lucky Goose (ACNE/CHASE CTR)	5/13/2026	1:00:42 PM	5/13/2026	1:52:56 PM	52m 14s	lucky.goose@acne.test	lucky.goose@acne.test	Attendee	0	0	1	0	0	1	0	1
+Fuzzball (ACNE/BRAIN EMP)	5/13/2026	1:07:55 PM	5/13/2026	1:28:55 PM	21m 0s	fuzzball@acne.test	fuzzball@acne.test	Attendee	0	0	0	0	0	0	0	0
