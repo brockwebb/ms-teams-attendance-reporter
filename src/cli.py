@@ -4,7 +4,7 @@ Wires together the parser → enricher → reporter pipeline:
 
     python -m src.cli data/synthetic/ \\
         --config config/config.yaml \\
-        --output data/processed/report.html
+        --output output/report.html
 
 If ``--config`` is omitted the pipeline runs in generic mode (no EMP/CTR
 classification, no org-specific dashboard sections).
@@ -47,8 +47,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config",
                     help="Org config file (YAML or JSON; enables EMP/CTR + org "
                          "rollup views). Omit for generic mode.")
-    ap.add_argument("--output", default="report.html",
-                    help="Output HTML file path (default: report.html)")
+    ap.add_argument("--output", default="output/report.html",
+                    help="Output HTML file path (default: output/report.html)")
     ap.add_argument("--cap-minutes", type=float, default=None,
                     help="Top-code attendance duration in minutes. Overrides "
                          "the config's cap_minutes (default: 60 if neither set).")

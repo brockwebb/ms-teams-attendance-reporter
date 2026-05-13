@@ -7,7 +7,7 @@ A config-driven Python pipeline that processes MS Teams meeting attendance CSV e
 ```
 data/raw/          → Drop raw Teams attendance CSVs here (gitignored, real data)
 data/synthetic/    → Synthetic test data (Looney-Tunes-parody themed, committed to repo)
-data/processed/    → Pipeline output (gitignored)
+output/            → Generated HTML reports (gitignored; CLI default destination)
 config/            → Single YAML config (config.yaml + config.example.yaml)
 src/               → Python source: parser, enricher, reporter, CLI, synthetic data generator
 files/             → Legacy files from prior development thread (gitignored, reference only)

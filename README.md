@@ -14,23 +14,24 @@ produces a single HTML file you open in a browser.
 pip install -r requirements.txt
 
 # Try it with the included synthetic data
-python -m src.cli data/synthetic/ --config config/config.yaml --output report.html
-open report.html
+python -m src.cli data/synthetic/ --config config/config.yaml
+open output/report.html
 ```
+
+Reports land in `output/` by default (gitignored). Override with `--output`.
 
 ## Usage
 
 ```bash
 # With org config (EMP/CTR splits, directorate rollups, drilldown charts)
-python -m src.cli data/synthetic/ --config config/config.yaml \
-    --output report.html
+python -m src.cli data/synthetic/ --config config/config.yaml
 
 # Generic mode — no org classification, just attendance stats
-python -m src.cli data/synthetic/ --output report.html
+python -m src.cli data/synthetic/
 
-# Custom attendance cap (default: 60 min)
+# Custom attendance cap (default: 60 min) and explicit output path
 python -m src.cli data/raw/ --config config/config.yaml \
-    --cap-minutes 55 --output report.html
+    --cap-minutes 55 --output output/raw_report.html
 ```
 
 ## Real Data
@@ -40,10 +41,11 @@ python -m src.cli data/raw/ --config config/config.yaml \
 3. Run the CLI against that directory:
 
 ```bash
-python -m src.cli data/raw/ --config config/config.yaml --output report.html
+python -m src.cli data/raw/ --config config/config.yaml
 ```
 
-The `data/raw/` directory is gitignored — your real attendance data stays local.
+`data/raw/` and `output/` are both gitignored — your real attendance data
+and the generated reports stay local.
 
 ## Customizing for Your Organization
 
@@ -64,7 +66,7 @@ See `config/config.example.yaml` for inline documentation of every field.
 config/            config.yaml + config.example.yaml
 data/raw/          Drop real Teams CSVs here (gitignored)
 data/synthetic/    Parody test fixtures — 50 "ACNE Corp" characters (committed)
-data/processed/    Pipeline output (gitignored)
+output/            Generated HTML reports (gitignored)
 src/
   parser.py        Parse the two-section Teams CSV format
   enricher.py      Apply org config (name classification, org rollup)

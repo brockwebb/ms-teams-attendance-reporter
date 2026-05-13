@@ -39,6 +39,10 @@ data/raw/**
 data/processed/**
 !data/processed/.gitkeep
 
+# Generated reports (HTML dashboards) — never committed
+output/**
+!output/.gitkeep
+
 # Synthetic test data IS committed (it's fake, it's the canonical test fixture)
 # data/synthetic/ is NOT ignored
 
