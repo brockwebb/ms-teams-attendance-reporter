@@ -45,12 +45,8 @@ data/processed/**
 # =============================================================================
 # TASK MANAGEMENT - Handoffs and Claude Code Tasks
 # =============================================================================
-handoffs/*
-!handoffs/README.md
-!handoffs/.gitkeep
-cc_tasks/*
-!cc_tasks/README.md
-!cc_tasks/.gitkeep
+handoffs/
+cc_tasks/
 
 # =============================================================================
 # OTHER
