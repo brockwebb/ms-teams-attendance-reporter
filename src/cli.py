@@ -3,7 +3,7 @@
 Wires together the parser → enricher → reporter pipeline:
 
     python -m src.cli data/synthetic/ \\
-        --config config/acme_org_mapping.json \\
+        --config config/config.yaml \\
         --output data/processed/report.html
 
 If ``--config`` is omitted the pipeline runs in generic mode (no EMP/CTR
@@ -45,12 +45,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("input_dir",
                     help="Directory of Teams attendance CSVs (or a single CSV)")
     ap.add_argument("--config",
-                    help="Org config JSON (enables EMP/CTR + org rollup views). "
-                         "Omit for generic mode.")
+                    help="Org config file (YAML or JSON; enables EMP/CTR + org "
+                         "rollup views). Omit for generic mode.")
     ap.add_argument("--output", default="report.html",
                     help="Output HTML file path (default: report.html)")
-    ap.add_argument("--cap-minutes", type=float, default=60.0,
-                    help="Top-code attendance duration in minutes (default: 60)")
+    ap.add_argument("--cap-minutes", type=float, default=None,
+                    help="Top-code attendance duration in minutes. Overrides "
+                         "the config's cap_minutes (default: 60 if neither set).")
     ap.add_argument("--title",
                     help="Override the report title (default derived from config "
                          "org_name or 'Teams Attendance Report')")
@@ -62,6 +63,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     config = load_org_config(args.config) if args.config else None
+    cap_minutes = (args.cap_minutes
+                   if args.cap_minutes is not None
+                   else (config or {}).get("cap_minutes", 60.0))
     print(f"Parsing {len(csv_files)} CSV file(s)"
           f"{' (org config: ' + str(args.config) + ')' if config else ' (generic mode)'}")
 
@@ -74,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         meta = result["metadata"]
         df = result["participants"]
         if config is not None and not df.empty:
-            df, unmapped = enrich_participants(df, config, cap_minutes=args.cap_minutes)
+            df, unmapped = enrich_participants(df, config, cap_minutes=cap_minutes)
             unmapped_total.update(unmapped)
         if not df.empty:
             df = df.copy()

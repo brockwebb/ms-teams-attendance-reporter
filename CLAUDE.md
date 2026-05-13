@@ -8,8 +8,8 @@ A config-driven Python pipeline that processes MS Teams meeting attendance CSV e
 data/raw/          → Drop raw Teams attendance CSVs here (gitignored, real data)
 data/synthetic/    → Synthetic test data (Looney-Tunes-parody themed, committed to repo)
 data/processed/    → Pipeline output (gitignored)
-config/            → Org mapping, column config, synthetic data generation config
-src/               → Python source: preprocessor, report generator, synthetic data generator
+config/            → Single YAML config (config.yaml + config.example.yaml)
+src/               → Python source: parser, enricher, reporter, CLI, synthetic data generator
 files/             → Legacy files from prior development thread (gitignored, reference only)
 ```
 
@@ -32,34 +32,44 @@ Header: Name, First Join, Last Leave, In-Meeting Duration, Email, Participant ID
 **CRITICAL**: "First Join" and "Last Leave" headers each map to TWO data columns (date + time). The header has 15 columns, data rows have 17. The parser must merge date+time fields.
 
 ### Name Field Pattern
-- `Name (CENSUS/CSVD FED)` → Federal employee, org code CSVD
-- `Name (CENSUS/OCIO CTR)` → Contractor, org code OCIO
-- `Name` (no parenthetical) → MS trainer, DROP from analysis
-- Pattern: `^(.+?)\s*\(CENSUS/(\S+)\s+(FED|CTR)\)\s*$`
+The display-name field in Teams exports typically encodes org membership
+in a parenthetical, e.g.:
+- `Name (ACNE/CHASE EMP)` → employee, org code CHASE
+- `Name (ACNE/LEGAL CTR)` → contractor, org code LEGAL
+- `Name` (no parenthetical) → external participant (e.g., MS trainer), DROP from analysis
+
+The exact pattern is configurable via `config/config.yaml`'s `name_pattern`
+regex. Real-org regexes are not committed to this repo.
 
 ### Duration Format
 Strings like `1h 59m 7s`, `46m 22s`, `54m 13s`. Parse to float minutes. Top-code at 60min for histograms.
 
 ## Org Mapping
-Sub-org codes roll up to major orgs via config/org_mapping.json:
-- CSVD, ADSD, OIS, ITSMO, CSD → CIO (major org)
-- OCIO → CIO (direct, top-level)
-- Unknown codes → UNMAPPED (flagged in report)
+Sub-org codes roll up to major orgs via `config/config.yaml`'s `org_mapping`
+section:
+- A major org may contain `direct_codes` (codes that ARE the major org
+  itself; people at this level have no sub-org) and `sub_orgs` (codes
+  that roll up under it).
+- Unknown codes appear as `UNMAPPED` in the report and are echoed to
+  stderr by the CLI.
 
 ## Config-Driven Design
-The pipeline should be reusable beyond Census. Key config points:
-- `org_labels`: rename "Company"→"Agency", "Division"→"Directorate" etc.
-- `name_pattern`: regex for parsing the name field (default: Census pattern)
+The pipeline is reusable across any organization with the same Teams
+attendance export format. Key fields in `config/config.yaml`:
+- `org_name`: appears in the report header
+- `name_pattern`: regex with three capture groups (clean name, org code,
+  employee type)
+- `labels`: customize axis labels and employee/contractor terminology
+- `cap_minutes`: top-code attendance for the histogram
 - `org_mapping`: hierarchical org code → major org rollup
-- Column names configurable so other orgs can swap labels
 
 ## Synthetic Data
 Looney-Tunes parody themed — legally-distinct names (ACNE = ACME parody, "Bugz Rabbit" not "Bugs Bunny", etc.). 50 characters across org units:
-- Top-level org: "ACNE" (analogous to "CENSUS"; legally-distinct ACME parody)
-- Major orgs with sub-orgs mimicking Census structure
+- Top-level org: "ACNE" (a fictional 4-directorate org used as the canonical test fixture)
+- Major orgs with sub-orgs to exercise the rollup logic
 - Mix of EMP and CTR designations
 - Realistic attendance patterns: some full-session, some partial, some drop/reconnect
-- Multiple meeting files simulating the 12-class training series
+- Multiple meeting files simulating a multi-class training series
 - Include some characters with NO parenthetical (to test MS trainer drop logic)
 
 ## Key Decisions
@@ -67,7 +77,7 @@ Looney-Tunes parody themed — legally-distinct names (ACNE = ACME parody, "Bugz
 - Pandas for preprocessing
 - No Jupyter — plain Python scripts
 - Real data never committed; synthetic data is the canonical test fixture
-- Two-layer: generic Teams parser works without org config; Census config is an overlay
+- Two-layer: generic Teams parser works without org config; org-specific YAML config is an overlay
 
 ## GitHub
 - Owner: brockwebb

@@ -1,0 +1,82 @@
+# =============================================================================
+# MS Teams Attendance Reporter — Configuration
+# =============================================================================
+# Single source of configuration. Copy this file (or config.example.yaml) and
+# customize for your organization. See README.md for field documentation.
+#
+# This example uses "ACNE Corp" synthetic test data. For real use, change
+# org_name, name_pattern, labels, and org_mapping to match your org.
+# =============================================================================
+
+# Organization name — appears in the report header and page title.
+org_name: "ACNE Corp"
+
+# ---------------------------------------------------------------------------
+# Name Pattern
+# ---------------------------------------------------------------------------
+# Regex applied to the Teams display-name field. Must define exactly THREE
+# capture groups, in this order:
+#   (1) clean name       e.g. "Bugz Rabbit"
+#   (2) org code         e.g. "CHASE"
+#   (3) employee type    e.g. "EMP"
+#
+# Matched examples:
+#   "Bugz Rabbit (ACNE/CHASE EMP)"  → name=Bugz Rabbit, org=CHASE, type=EMP
+#   "Pat Cougar  (ACNE/LEGAL CTR)"  → name=Pat Cougar,  org=LEGAL, type=CTR
+#
+# Names that don't match are treated as external (e.g., MS trainers) and
+# excluded from the analysis. Set to null to run in generic mode (no org
+# classification — the report is rendered without EMP/CTR or org rollups).
+name_pattern: '^(.+?)\s*\(ACNE/(\S+)\s+(EMP|CTR)\)\s*$'
+
+# ---------------------------------------------------------------------------
+# Labels — customize to match your org's terminology
+# ---------------------------------------------------------------------------
+# - employee/contractor are the literal values that regex group (3) emits
+#   for each class. They drive aggregation, so they must match what the
+#   regex actually captures.
+# - level_1 / level_2 are the human-friendly axis labels shown in the
+#   report ("By Directorate", "Trend by Directorate", etc.).
+labels:
+  employee: "EMP"            # internal staff label (e.g., "FED" for federal)
+  contractor: "CTR"          # contractor label
+  level_1: "Directorate"     # major-org grouping (axis label in report)
+  level_2: "Division"        # sub-org grouping (axis label in report)
+
+# ---------------------------------------------------------------------------
+# Attendance Settings
+# ---------------------------------------------------------------------------
+# Top-code attendance durations at this value (minutes) when building the
+# histogram. Larger values cluster at the upper bucket. The CLI's
+# --cap-minutes flag overrides this.
+cap_minutes: 60
+
+# ---------------------------------------------------------------------------
+# Org Hierarchy
+# ---------------------------------------------------------------------------
+# Maps org codes (captured by group (2) of name_pattern) to a two-level
+# hierarchy:
+#
+#   direct_codes: codes that ARE the major org itself. People at this
+#                 level have no sub-org (sub_org appears as "(direct)"
+#                 in the drilldown).
+#   sub_orgs:     codes that roll up under this major org.
+#
+# Codes not listed anywhere appear as "UNMAPPED" in the report — the CLI
+# also prints them to stderr so you can extend this section.
+org_mapping:
+  ROCKETWORKS:
+    direct_codes: [RKTW]
+    sub_orgs: [ANVIL, BOOM, JETPK, PAINT, TRAPS]
+
+  TOONOPS:
+    direct_codes: [TOPS]
+    sub_orgs: [CHASE, STUNT, PROPS]
+
+  ACMELABS:
+    direct_codes: [LABS]
+    sub_orgs: [BRAIN, GENETICS, QUANTUM]
+
+  ADMIN:
+    direct_codes: [ADMN]
+    sub_orgs: [HR, LEGAL, FINANCE]

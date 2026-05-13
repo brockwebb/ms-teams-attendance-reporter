@@ -1,0 +1,34 @@
+# =============================================================================
+# EXAMPLE CONFIG — copy to config.yaml and customize for your organization.
+# See README.md for documentation of each field.
+# =============================================================================
+
+# Organization name — appears in the report header and page title.
+org_name: "Your Org Name"
+
+# Regex applied to the Teams display-name field. Must define exactly THREE
+# capture groups: (1) clean name, (2) org code, (3) employee type.
+# Set to null to run in generic mode (no org classification).
+name_pattern: '^(.+?)\s*\(YOURORG/(\S+)\s+(EMP|CTR)\)\s*$'
+
+# Customize to your org's vocabulary. employee/contractor must match the
+# literal values your regex captures in group (3).
+labels:
+  employee: "EMP"
+  contractor: "CTR"
+  level_1: "Directorate"
+  level_2: "Division"
+
+# Top-code attendance durations at this value (minutes) for the histogram.
+cap_minutes: 60
+
+# Map org codes to major/sub hierarchy. direct_codes belong to the major
+# org itself; sub_orgs roll up under it. Unlisted codes show as UNMAPPED.
+org_mapping:
+  MAJOR_ORG_A:
+    direct_codes: [MAJA]
+    sub_orgs: [SUB1, SUB2]
+
+  MAJOR_ORG_B:
+    direct_codes: [MAJB]
+    sub_orgs: [SUB3, SUB4]

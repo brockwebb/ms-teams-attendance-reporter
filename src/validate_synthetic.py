@@ -26,7 +26,7 @@ from parser import parse_teams_csv  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
 SYNTHETIC_DIR = REPO_ROOT / "data" / "synthetic"
-CONFIG_PATH = REPO_ROOT / "config" / "acme_org_mapping.json"
+CONFIG_PATH = REPO_ROOT / "config" / "config.yaml"
 
 
 def main() -> int:

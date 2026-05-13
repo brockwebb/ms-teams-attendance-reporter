@@ -69,7 +69,9 @@ def _safe_float(value) -> float:
 
 def _compute_meetings_payload(meetings: list[dict],
                               participants_by_source: dict[str, pd.DataFrame],
-                              has_config: bool) -> list[dict]:
+                              has_config: bool,
+                              emp_label: str,
+                              ctr_label: str) -> list[dict]:
     """Per-meeting stats for the summary table and trend charts."""
     rows: list[dict] = []
     for meta in meetings:
@@ -78,8 +80,8 @@ def _compute_meetings_payload(meetings: list[dict],
         if has_config and "is_internal" in df.columns:
             internal = df[df["is_internal"]]
             external_dropped = int((~df["is_internal"]).sum())
-            emp = int((internal["employee_type"] == "EMP").sum()) if "employee_type" in internal.columns else 0
-            ctr = int((internal["employee_type"] == "CTR").sum()) if "employee_type" in internal.columns else 0
+            emp = int((internal["employee_type"] == emp_label).sum()) if "employee_type" in internal.columns else 0
+            ctr = int((internal["employee_type"] == ctr_label).sum()) if "employee_type" in internal.columns else 0
         else:
             internal = df
             external_dropped = 0
@@ -106,7 +108,8 @@ def _bucket_index(minutes: float) -> int:
     return min(idx, len(HISTOGRAM_EDGES) - 2)
 
 
-def _compute_histogram(combined: pd.DataFrame, has_config: bool) -> dict:
+def _compute_histogram(combined: pd.DataFrame, has_config: bool,
+                       emp_label: str, ctr_label: str) -> dict:
     labels = [f"{HISTOGRAM_EDGES[i]}-{HISTOGRAM_EDGES[i + 1]}" for i in range(len(HISTOGRAM_EDGES) - 1)]
     duration_col = "attendance_minutes_capped" if "attendance_minutes_capped" in combined.columns else "attendance_minutes"
     emp_buckets = [0] * (len(HISTOGRAM_EDGES) - 1)
@@ -119,27 +122,29 @@ def _compute_histogram(combined: pd.DataFrame, has_config: bool) -> dict:
         idx = _bucket_index(mins)
         all_buckets[idx] += 1
         if has_config:
-            if etype == "EMP":
+            if etype == emp_label:
                 emp_buckets[idx] += 1
-            elif etype == "CTR":
+            elif etype == ctr_label:
                 ctr_buckets[idx] += 1
     return {"labels": labels, "EMP": emp_buckets, "CTR": ctr_buckets, "All": all_buckets}
 
 
-def _compute_major_org_stack(combined: pd.DataFrame) -> list[dict]:
+def _compute_major_org_stack(combined: pd.DataFrame,
+                             emp_label: str, ctr_label: str) -> list[dict]:
     if "major_org" not in combined.columns:
         return []
     grouped = combined.groupby(["major_org", "employee_type"]).size().unstack(fill_value=0)
-    grouped = grouped.reindex(columns=["EMP", "CTR"], fill_value=0)
+    grouped = grouped.reindex(columns=[emp_label, ctr_label], fill_value=0)
     grouped["total"] = grouped.sum(axis=1)
     grouped = grouped.sort_values("total", ascending=False)
     return [
-        {"major_org": idx, "EMP": int(row["EMP"]), "CTR": int(row["CTR"])}
+        {"major_org": idx, "EMP": int(row[emp_label]), "CTR": int(row[ctr_label])}
         for idx, row in grouped.iterrows()
     ]
 
 
-def _compute_sub_org_by_major(combined: pd.DataFrame) -> dict[str, list[dict]]:
+def _compute_sub_org_by_major(combined: pd.DataFrame,
+                              emp_label: str, ctr_label: str) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
     if "major_org" not in combined.columns or "sub_org" not in combined.columns:
         return out
@@ -147,11 +152,11 @@ def _compute_sub_org_by_major(combined: pd.DataFrame) -> dict[str, list[dict]]:
         sub_df = sub_df.copy()
         sub_df["sub_org_display"] = sub_df["sub_org"].fillna("(direct)")
         grouped = sub_df.groupby(["sub_org_display", "employee_type"]).size().unstack(fill_value=0)
-        grouped = grouped.reindex(columns=["EMP", "CTR"], fill_value=0)
+        grouped = grouped.reindex(columns=[emp_label, ctr_label], fill_value=0)
         grouped["total"] = grouped.sum(axis=1)
         grouped = grouped.sort_values("total", ascending=False)
         out[str(major)] = [
-            {"sub_org": idx, "EMP": int(row["EMP"]), "CTR": int(row["CTR"])}
+            {"sub_org": idx, "EMP": int(row[emp_label]), "CTR": int(row[ctr_label])}
             for idx, row in grouped.iterrows()
         ]
     return out
@@ -216,15 +221,18 @@ def _build_payload(meetings: list[dict],
                    participants: pd.DataFrame,
                    config: dict | None) -> dict:
     has_config = config is not None
-    org_labels = (config or {}).get("org_labels", {}) if has_config else {}
+    cfg_labels = (config or {}).get("labels", {}) if has_config else {}
     org_name = (config or {}).get("org_name", "") if has_config else ""
+    emp_label = cfg_labels.get("employee", "EMP")
+    ctr_label = cfg_labels.get("contractor", "CTR")
 
     participants_by_source: dict[str, pd.DataFrame] = {}
     if not participants.empty and "source_file" in participants.columns:
         for source, df in participants.groupby("source_file"):
             participants_by_source[str(source)] = df
 
-    meetings_payload = _compute_meetings_payload(meetings, participants_by_source, has_config)
+    meetings_payload = _compute_meetings_payload(
+        meetings, participants_by_source, has_config, emp_label, ctr_label)
 
     if has_config and "is_internal" in participants.columns:
         internal = participants[participants["is_internal"]].copy()
@@ -235,17 +243,17 @@ def _build_payload(meetings: list[dict],
         "config": {
             "has_org_config": has_config,
             "org_name": org_name,
-            "org_labels": {
-                "level_1": org_labels.get("level_1", "Agency"),
-                "level_2": org_labels.get("level_2", "Major Org"),
-                "level_3": org_labels.get("level_3", "Sub Org"),
-                "employee_type": org_labels.get("employee_type", "Status"),
+            "labels": {
+                "employee": emp_label,
+                "contractor": ctr_label,
+                "level_1": cfg_labels.get("level_1", "Major Org"),
+                "level_2": cfg_labels.get("level_2", "Sub Org"),
             },
         },
         "meetings": meetings_payload,
-        "histogram": _compute_histogram(internal, has_config),
-        "major_org_stack": _compute_major_org_stack(internal) if has_config else [],
-        "sub_org_by_major": _compute_sub_org_by_major(internal) if has_config else {},
+        "histogram": _compute_histogram(internal, has_config, emp_label, ctr_label),
+        "major_org_stack": _compute_major_org_stack(internal, emp_label, ctr_label) if has_config else [],
+        "sub_org_by_major": _compute_sub_org_by_major(internal, emp_label, ctr_label) if has_config else {},
         "trend": _compute_trend(meetings_payload),
         "trend_by_major_org": _compute_trend_by_major_org(internal, meetings_payload) if has_config else {"labels": [], "series": {}},
         "participants": _compute_participant_summary(internal, has_config),
@@ -472,7 +480,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 (function () {
   const DATA = __DATA_JSON__;
   const hasOrg = DATA.config.has_org_config;
-  const labels = DATA.config.org_labels;
+  const labels = DATA.config.labels;
   const palette = DATA.palette;
 
   if (!hasOrg) document.body.classList.add("no-org");
@@ -481,8 +489,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   const meetings = DATA.meetings;
   const dates = meetings.map(m => m.date).filter(Boolean).sort();
   const totalParticipants = DATA.participants.length;
-  const empTotal = DATA.participants.filter(p => p.employee_type === "EMP").length;
-  const ctrTotal = DATA.participants.filter(p => p.employee_type === "CTR").length;
+  const empTotal = DATA.participants.filter(p => p.employee_type === labels.employee).length;
+  const ctrTotal = DATA.participants.filter(p => p.employee_type === labels.contractor).length;
   const empCtrTotal = empTotal + ctrTotal;
 
   const subtitleParts = [];
@@ -496,8 +504,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   ];
   if (hasOrg) {
     const empShare = empCtrTotal ? Math.round((empTotal / empCtrTotal) * 100) : 0;
-    tiles.push({ label: `${labels.employee_type} (EMP/CTR)`, value: `${empTotal} / ${ctrTotal}` });
-    tiles.push({ label: "EMP share", value: empShare + "%" });
+    tiles.push({ label: `${labels.employee} / ${labels.contractor}`, value: `${empTotal} / ${ctrTotal}` });
+    tiles.push({ label: `${labels.employee} share`, value: empShare + "%" });
   }
   const tilesEl = document.getElementById("summary-tiles");
   tiles.forEach(t => {
@@ -515,8 +523,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         { key: "date", label: "Date" },
         { key: "meeting_title", label: "Meeting" },
         { key: "total_attendees", label: "Attendees", numeric: true },
-        { key: "emp_count", label: "EMP", numeric: true },
-        { key: "ctr_count", label: "CTR", numeric: true },
+        { key: "emp_count", label: labels.employee, numeric: true },
+        { key: "ctr_count", label: labels.contractor, numeric: true },
         { key: "avg_attendance_min", label: "Avg (min)", numeric: true },
         { key: "dropped_external", label: "External Dropped", numeric: true },
       ]
@@ -532,8 +540,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   const histogramData = DATA.histogram;
   const histDatasets = hasOrg
     ? [
-        { label: "EMP", data: histogramData.EMP, backgroundColor: palette.emp, stack: "stack" },
-        { label: "CTR", data: histogramData.CTR, backgroundColor: palette.ctr, stack: "stack" },
+        { label: labels.employee, data: histogramData.EMP, backgroundColor: palette.emp, stack: "stack" },
+        { label: labels.contractor, data: histogramData.CTR, backgroundColor: palette.ctr, stack: "stack" },
       ]
     : [
         { label: "Attendees", data: histogramData.All, backgroundColor: palette.emp },
@@ -554,15 +562,15 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   if (hasOrg) {
     // Major-org stacked bar (horizontal)
-    document.getElementById("major-stack-title").textContent = `By ${labels.level_2}`;
+    document.getElementById("major-stack-title").textContent = `By ${labels.level_1}`;
     const majorStack = DATA.major_org_stack;
     new Chart(document.getElementById("major-stack-chart").getContext("2d"), {
       type: "bar",
       data: {
         labels: majorStack.map(r => r.major_org),
         datasets: [
-          { label: "EMP", data: majorStack.map(r => r.EMP), backgroundColor: palette.emp, stack: "s" },
-          { label: "CTR", data: majorStack.map(r => r.CTR), backgroundColor: palette.ctr, stack: "s" },
+          { label: labels.employee, data: majorStack.map(r => r.EMP), backgroundColor: palette.emp, stack: "s" },
+          { label: labels.contractor, data: majorStack.map(r => r.CTR), backgroundColor: palette.ctr, stack: "s" },
         ],
       },
       options: {
@@ -574,7 +582,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     });
 
     // Drilldown
-    document.getElementById("drilldown-title").textContent = `${labels.level_2} Drilldown`;
+    document.getElementById("drilldown-title").textContent = `${labels.level_1} Drilldown`;
     const picker = document.getElementById("major-org-picker");
     const subOrgData = DATA.sub_org_by_major;
     const majors = Object.keys(subOrgData);
@@ -595,8 +603,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         data: {
           labels: rows.map(r => r.sub_org),
           datasets: [
-            { label: "EMP", data: rows.map(r => r.EMP), backgroundColor: palette.emp, stack: "s" },
-            { label: "CTR", data: rows.map(r => r.CTR), backgroundColor: palette.ctr, stack: "s" },
+            { label: labels.employee, data: rows.map(r => r.EMP), backgroundColor: palette.emp, stack: "s" },
+            { label: labels.contractor, data: rows.map(r => r.CTR), backgroundColor: palette.ctr, stack: "s" },
           ],
         },
         options: {
@@ -617,8 +625,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   const trend = DATA.trend;
   const trendDatasets = hasOrg
     ? [
-        { label: "EMP", data: trend.EMP, backgroundColor: palette.emp, stack: "s" },
-        { label: "CTR", data: trend.CTR, backgroundColor: palette.ctr, stack: "s" },
+        { label: labels.employee, data: trend.EMP, backgroundColor: palette.emp, stack: "s" },
+        { label: labels.contractor, data: trend.CTR, backgroundColor: palette.ctr, stack: "s" },
       ]
     : [
         { label: "Attendees", data: trend.Total, backgroundColor: palette.emp },
@@ -641,7 +649,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   });
 
   if (hasOrg) {
-    document.getElementById("trend-org-title").textContent = `Trend by ${labels.level_2}`;
+    document.getElementById("trend-org-title").textContent = `Trend by ${labels.level_1}`;
     const tbm = DATA.trend_by_major_org;
     const orgs = Object.keys(tbm.series);
     new Chart(document.getElementById("trend-org-chart").getContext("2d"), {
@@ -671,9 +679,9 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     ? [
         { key: "name", label: "Name" },
         { key: "org_code", label: "Org Code" },
-        { key: "major_org", label: labels.level_2 },
-        { key: "sub_org", label: labels.level_3 },
-        { key: "employee_type", label: labels.employee_type },
+        { key: "major_org", label: labels.level_1 },
+        { key: "sub_org", label: labels.level_2 },
+        { key: "employee_type", label: "Type" },
         { key: "sessions_attended", label: "Sessions", numeric: true },
         { key: "total_duration_min", label: "Total (min)", numeric: true },
         { key: "avg_duration_min", label: "Avg (min)", numeric: true },
