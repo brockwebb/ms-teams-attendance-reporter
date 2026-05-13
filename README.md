@@ -1,54 +1,95 @@
 # MS Teams Attendance Reporter
 
 Config-driven Python pipeline that turns MS Teams meeting attendance CSV
-exports into a self-contained interactive HTML dashboard.
+exports into a self-contained interactive HTML dashboard — attendance
+histograms, EMP/CTR splits, directorate rollups with drilldown, and
+trend charts across meetings.
 
-**Status: work in progress.** Pipeline scaffolding and synthetic test data
-are in place; parser, enricher, and reporter modules are not yet implemented.
+No server, no Excel, no dependencies beyond pandas and pyyaml. One command
+produces a single HTML file you open in a browser.
 
-## Layout
+## Quick Start
+
+```bash
+pip install -r requirements.txt
+
+# Try it with the included synthetic data
+python -m src.cli data/synthetic/ --config config/config.yaml --output report.html
+open report.html
+```
+
+## Usage
+
+```bash
+# With org config (EMP/CTR splits, directorate rollups, drilldown charts)
+python -m src.cli data/synthetic/ --config config/config.yaml \
+    --output report.html
+
+# Generic mode — no org classification, just attendance stats
+python -m src.cli data/synthetic/ --output report.html
+
+# Custom attendance cap (default: 60 min)
+python -m src.cli data/raw/ --config config/config.yaml \
+    --cap-minutes 55 --output report.html
+```
+
+## Real Data
+
+1. Export attendance from a Teams meeting (requires Teams Premium).
+2. Drop the CSV file(s) into `data/raw/`.
+3. Run the CLI against that directory:
+
+```bash
+python -m src.cli data/raw/ --config config/config.yaml --output report.html
+```
+
+The `data/raw/` directory is gitignored — your real attendance data stays local.
+
+## Customizing for Your Organization
+
+1. Copy `config/config.example.yaml` to `config/config.yaml`.
+2. Edit the fields:
+   - `org_name` — appears in the report header
+   - `name_pattern` — regex matching your Teams display names (3 capture groups: clean name, org code, employee type)
+   - `labels` — your org's terms for employees/contractors and org levels
+   - `org_mapping` — which sub-org codes roll up to which major orgs
+3. Names that don't match the pattern are treated as external (e.g., MS trainers) and excluded from analysis.
+4. Unrecognized org codes show as "UNMAPPED" in the report so you know what to add to the config.
+
+See `config/config.example.yaml` for inline documentation of every field.
+
+## Project Layout
 
 ```
-config/         config.yaml (single source of org config) + config.example.yaml
-data/raw/       Drop raw Teams CSVs here (gitignored)
-data/synthetic/ Looney-Tunes-parody test fixtures (committed)
-data/processed/ Pipeline output (gitignored)
-src/            Python source (parser, enricher, reporter, CLI)
+config/            config.yaml + config.example.yaml
+data/raw/          Drop real Teams CSVs here (gitignored)
+data/synthetic/    Parody test fixtures — 50 "ACNE Corp" characters (committed)
+data/processed/    Pipeline output (gitignored)
+src/
+  parser.py        Parse the two-section Teams CSV format
+  enricher.py      Apply org config (name classification, org rollup)
+  reporter.py      Generate self-contained HTML dashboard
+  cli.py           Entry point: parser → enricher → reporter
+  generate_synthetic.py   Generate the test fixture CSVs
+  validate_synthetic.py   Validate parser+enricher against test data
+  assets/          Vendored Chart.js 4.4.6 (~200KB, MIT) inlined into
+                   every report so the HTML runs fully offline
 ```
 
-## Generating synthetic test data
+## Synthetic Test Data
+
+The included test data uses "ACNE Corp" — a Temu-grade Looney Tunes parody
+with 50 characters across 4 directorates. Regenerate it:
 
 ```bash
 python src/generate_synthetic.py
 ```
 
-Writes four meeting CSVs to `data/synthetic/` in the exact two-section format
-real Teams exports use (metadata block + participant table with split
-date/time data columns).
-
-## Usage
+Validate the pipeline against it:
 
 ```bash
-pip install -r requirements.txt
-
-# With org config (EMP/CTR splits, directorate rollups, drilldown)
-python -m src.cli data/synthetic/ --config config/config.yaml \
-    --output data/processed/report.html
-
-# Generic mode (no org classification)
-python -m src.cli data/synthetic/ --output data/processed/report_generic.html
-
-# Open the result in any browser — no server needed
-open data/processed/report.html
+python src/validate_synthetic.py
 ```
-
-## Customizing for your organization
-
-1. Copy `config/config.example.yaml` to `config/config.yaml`.
-2. Edit `org_name`, `name_pattern` (regex with three capture groups:
-   clean name, org code, employee type), `labels`, and `org_mapping`.
-3. Drop your real Teams attendance CSV exports into `data/raw/` and run
-   the CLI against that directory.
 
 ## License
 
