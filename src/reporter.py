@@ -31,11 +31,32 @@ CHART_JS_PATH = ASSETS_DIR / "chart.umd.js"
 
 DEFAULT_TITLE = "Teams Attendance Report"
 DEFAULT_CAP_MINUTES = 60.0
-EMP_COLOR = "#2a9d8f"
-CTR_COLOR = "#e76f51"
-# ColorBrewer Set2-ish palette for major-org lines / segments
-ORG_PALETTE = ["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3",
-               "#a6d854", "#ffd92f", "#e5c494", "#b3b3b3"]
+
+# U.S. Census Bureau Data Visualization Standards palette.
+# https://xdgov.github.io/data-design-standards/components/colors
+# These values are mirrored in the CSS :root block below — keep them
+# in sync (small enough duplication to be obvious).
+COLORS = {
+    "emp":       "#0095A8",  # Census teal — employee / internal
+    "ctr":       "#FF7043",  # Census orange — contractor
+    "navy":      "#112E51",  # Headers, body text, table header bg
+    "grey":      "#78909C",  # Axis labels, secondary text, ticks
+    "grid":      "#CFD8DC",  # Grid lines, table borders
+    "bg":        "#FFFFFF",
+    "row_alt":   "#F5F5F5",
+    "teal_dark": "#006C7A",
+}
+# Qualitative ramp for multi-line charts (e.g., trend by major org).
+# Drawn from Census featured colors first, then deeper teal ramp slots.
+ORG_PALETTE = [
+    "#0095A8",  # teal
+    "#112E51",  # navy
+    "#FF7043",  # orange
+    "#78909C",  # grey
+    "#006C7A",  # dark teal
+    "#004851",  # darker teal
+    "#B2EBF2",  # lightest teal
+]
 
 
 def _meeting_date_iso(start_time_str) -> str:
@@ -277,9 +298,12 @@ def _build_payload(meetings: list[dict],
         "trend": _compute_trend(meetings_payload),
         "trend_by_major_org": _compute_trend_by_major_org(internal, meetings_payload) if has_config else {"labels": [], "series": {}},
         "palette": {
-            "emp": EMP_COLOR,
-            "ctr": CTR_COLOR,
-            "org": ORG_PALETTE,
+            "emp":  COLORS["emp"],
+            "ctr":  COLORS["ctr"],
+            "navy": COLORS["navy"],
+            "grey": COLORS["grey"],
+            "grid": COLORS["grid"],
+            "org":  ORG_PALETTE,
         },
     }
 
@@ -369,14 +393,27 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <title>__TITLE__</title>
 <style>
   :root {
-    --bg: #ffffff;
-    --fg: #1f2937;
-    --muted: #6b7280;
-    --border: #e5e7eb;
-    --accent: #2a9d8f;
-    --emp: #2a9d8f;
-    --ctr: #e76f51;
-    --row-alt: #f9fafb;
+    /* U.S. Census Bureau Data Visualization Standards palette.
+       Mirrors COLORS dict in reporter.py — keep in sync. */
+    --census-teal:      #0095A8;
+    --census-navy:      #112E51;
+    --census-orange:    #FF7043;
+    --census-grey:      #78909C;
+    --census-grid:      #CFD8DC;
+    --census-bg:        #FFFFFF;
+    --census-row-alt:   #F5F5F5;
+    --census-teal-dark: #006C7A;
+
+    /* Semantic mappings used throughout the stylesheet */
+    --bg:       var(--census-bg);
+    --fg:       var(--census-navy);
+    --muted:    var(--census-grey);
+    --border:   var(--census-grid);
+    --row-alt:  var(--census-row-alt);
+    --emp:      var(--census-teal);
+    --ctr:      var(--census-orange);
+    --th-bg:    var(--census-navy);
+    --th-fg:    #FFFFFF;
   }
   * { box-sizing: border-box; }
   body {
@@ -396,7 +433,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     margin-top: 1rem;
   }
   .tile {
-    background: #f3f4f6;
+    background: var(--row-alt);
     border-radius: 8px;
     padding: 0.9rem 1rem;
   }
@@ -418,12 +455,14 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     border-bottom: 1px solid var(--border);
   }
   table.data th {
-    background: #f3f4f6;
+    background: var(--th-bg);
+    color: var(--th-fg);
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    border-bottom: none;
   }
-  table.data th::after { content: ""; margin-left: 0.3rem; opacity: 0.4; }
+  table.data th::after { content: ""; margin-left: 0.3rem; opacity: 0.5; }
   table.data th[data-sort="asc"]::after { content: "▲"; opacity: 1; }
   table.data th[data-sort="desc"]::after { content: "▼"; opacity: 1; }
   table.data tbody tr:nth-child(even) { background: var(--row-alt); }
@@ -495,6 +534,13 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   const labels = DATA.config.labels;
   const cap = DATA.config.cap_minutes;
   const palette = DATA.palette;
+
+  // Apply Census Data Viz palette to Chart.js defaults so every chart
+  // (axes, legend, grid) inherits the same colors without per-chart code.
+  Chart.defaults.color = palette.grey;
+  Chart.defaults.borderColor = palette.grid;
+  Chart.defaults.font.family =
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
   if (!hasOrg) document.body.classList.add("no-org");
 
