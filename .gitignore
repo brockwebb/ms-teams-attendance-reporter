@@ -1,0 +1,69 @@
+# Environment
+.env
+*.env
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# DATA - Structure preserved, contents ignored
+# =============================================================================
+
+# Raw attendance CSVs (real data, never commit)
+data/raw/**
+!data/raw/.gitkeep
+!data/raw/README.md
+
+# Processed output
+data/processed/**
+!data/processed/.gitkeep
+
+# Synthetic test data IS committed (it's fake, it's the canonical test fixture)
+# data/synthetic/ is NOT ignored
+
+# =============================================================================
+# TASK MANAGEMENT - Handoffs and Claude Code Tasks
+# =============================================================================
+handoffs/*
+!handoffs/README.md
+!handoffs/.gitkeep
+cc_tasks/*
+!cc_tasks/README.md
+!cc_tasks/.gitkeep
+
+# =============================================================================
+# OTHER
+# =============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+*.log
+logs/
+
+# Legacy files from prior thread
+files/
+
+# Local Claude Code agent state (mind memory, settings)
+.claude/
