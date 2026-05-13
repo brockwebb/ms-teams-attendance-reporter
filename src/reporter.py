@@ -7,13 +7,14 @@ Two modes:
   * Config mode  — caller passes a loaded org config; the report shows
     EMP/CTR splits, major-org stacked bars, the major-org drilldown, and
     a per-major-org trend line.
-  * Generic mode — caller passes ``config=None``; the report still shows
-    meeting summary, attendance histogram, attendance trend, and the
-    participant detail table, but skips the org-specific sections.
+  * Generic mode — caller passes ``config=None``; the report shows
+    meeting summary, attendance trend, and the duration histogram, but
+    skips the org-specific sections.
 
-Math (histogram bins, per-meeting/per-org rollups, participant summary)
-is computed in Python and baked into a JSON blob. The browser-side JS
-only renders.
+No individual participant names ever appear in the rendered HTML or in
+the inlined JSON payload. All math (per-meeting stats, histogram bins,
+org rollups, trend series, summary aggregates) is computed in pandas and
+baked into a JSON blob; the browser-side JS only renders.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ ASSETS_DIR = Path(__file__).parent / "assets"
 CHART_JS_PATH = ASSETS_DIR / "chart.umd.js"
 
 DEFAULT_TITLE = "Teams Attendance Report"
-HISTOGRAM_EDGES = list(range(0, 65, 5))  # 0,5,...,60 → 12 bins of width 5
+DEFAULT_CAP_MINUTES = 60.0
 EMP_COLOR = "#2a9d8f"
 CTR_COLOR = "#e76f51"
 # ColorBrewer Set2-ish palette for major-org lines / segments
@@ -67,24 +68,41 @@ def _safe_float(value) -> float:
         return 0.0
 
 
+def _histogram_edges(cap_minutes: float) -> list[int]:
+    """Bin edges of width 5 from 0 to (cap rounded up to a multiple of 5)."""
+    cap_int = max(5, int(cap_minutes))
+    upper = ((cap_int + 4) // 5) * 5
+    return list(range(0, upper + 1, 5))
+
+
+def _bucket_index(minutes: float, edges: list[int]) -> int:
+    if minutes < 0:
+        return 0
+    idx = int(minutes // 5)
+    return min(idx, len(edges) - 2)
+
+
 def _compute_meetings_payload(meetings: list[dict],
                               participants_by_source: dict[str, pd.DataFrame],
                               has_config: bool,
                               emp_label: str,
                               ctr_label: str) -> list[dict]:
-    """Per-meeting stats for the summary table and trend charts."""
+    """Per-meeting stats for the summary table and trend charts.
+
+    ``dropped_external`` is intentionally not exposed — drops happen
+    inside the pipeline but the count is a cleaning artifact, not data
+    a viewer needs.
+    """
     rows: list[dict] = []
     for meta in meetings:
         source = meta.get("source_file", "")
         df = participants_by_source.get(source, pd.DataFrame())
         if has_config and "is_internal" in df.columns:
             internal = df[df["is_internal"]]
-            external_dropped = int((~df["is_internal"]).sum())
             emp = int((internal["employee_type"] == emp_label).sum()) if "employee_type" in internal.columns else 0
             ctr = int((internal["employee_type"] == ctr_label).sum()) if "employee_type" in internal.columns else 0
         else:
             internal = df
-            external_dropped = 0
             emp = ctr = 0
         rows.append({
             "source_file": source,
@@ -95,31 +113,26 @@ def _compute_meetings_payload(meetings: list[dict],
             "total_attendees": int(len(internal)),
             "emp_count": emp,
             "ctr_count": ctr,
-            "dropped_external": external_dropped,
         })
     rows.sort(key=lambda r: r["date"] or r["source_file"])
     return rows
 
 
-def _bucket_index(minutes: float) -> int:
-    if minutes < 0:
-        return 0
-    idx = int(minutes // 5)
-    return min(idx, len(HISTOGRAM_EDGES) - 2)
-
-
 def _compute_histogram(combined: pd.DataFrame, has_config: bool,
-                       emp_label: str, ctr_label: str) -> dict:
-    labels = [f"{HISTOGRAM_EDGES[i]}-{HISTOGRAM_EDGES[i + 1]}" for i in range(len(HISTOGRAM_EDGES) - 1)]
+                       emp_label: str, ctr_label: str,
+                       cap_minutes: float) -> dict:
+    edges = _histogram_edges(cap_minutes)
+    labels = [f"{edges[i]}-{edges[i + 1]}" for i in range(len(edges) - 1)]
     duration_col = "attendance_minutes_capped" if "attendance_minutes_capped" in combined.columns else "attendance_minutes"
-    emp_buckets = [0] * (len(HISTOGRAM_EDGES) - 1)
-    ctr_buckets = [0] * (len(HISTOGRAM_EDGES) - 1)
-    all_buckets = [0] * (len(HISTOGRAM_EDGES) - 1)
+    emp_buckets = [0] * (len(edges) - 1)
+    ctr_buckets = [0] * (len(edges) - 1)
+    all_buckets = [0] * (len(edges) - 1)
     if duration_col not in combined.columns or combined.empty:
         return {"labels": labels, "EMP": emp_buckets, "CTR": ctr_buckets, "All": all_buckets}
-    for value, etype in zip(combined[duration_col], combined.get("employee_type", pd.Series([None] * len(combined)))):
-        mins = min(60.0, _safe_float(value))
-        idx = _bucket_index(mins)
+    etypes = combined.get("employee_type", pd.Series([None] * len(combined)))
+    for value, etype in zip(combined[duration_col], etypes):
+        mins = min(float(cap_minutes), _safe_float(value))
+        idx = _bucket_index(mins, edges)
         all_buckets[idx] += 1
         if has_config:
             if etype == emp_label:
@@ -192,34 +205,39 @@ def _compute_trend_by_major_org(combined: pd.DataFrame,
     return {"labels": labels, "series": series}
 
 
-def _compute_participant_summary(combined: pd.DataFrame, has_config: bool) -> list[dict]:
+def _compute_summary(combined: pd.DataFrame, has_config: bool,
+                     emp_label: str, ctr_label: str) -> dict:
+    """Aggregate counts for the header tiles. Returns no per-participant data.
+
+    Unique-participant identity is keyed by ``clean_name`` when available
+    (so two meetings with the same person count once) and falls back to
+    ``Name`` for generic mode.
+    """
     if combined.empty:
-        return []
+        return {"total_unique_participants": 0, "emp_total": 0, "ctr_total": 0}
     if has_config and "clean_name" in combined.columns:
         key = combined["clean_name"].fillna(combined["Name"])
     else:
         key = combined["Name"]
     work = combined.assign(_key=key.astype(str))
-    rows = []
-    for k, group in work.groupby("_key", sort=False):
-        first = group.iloc[0]
-        rows.append({
-            "name": k,
-            "org_code": str(first["org_code"]) if "org_code" in group.columns and not pd.isna(first.get("org_code")) else "",
-            "major_org": str(first["major_org"]) if "major_org" in group.columns and not pd.isna(first.get("major_org")) else "",
-            "sub_org": str(first["sub_org"]) if "sub_org" in group.columns and not pd.isna(first.get("sub_org")) else "",
-            "employee_type": str(first["employee_type"]) if "employee_type" in group.columns and not pd.isna(first.get("employee_type")) else "",
-            "sessions_attended": int(len(group)),
-            "total_duration_min": round(float(group["attendance_minutes"].sum()), 1),
-            "avg_duration_min": round(float(group["attendance_minutes"].mean()), 1),
-        })
-    rows.sort(key=lambda r: (-r["sessions_attended"], -r["total_duration_min"], r["name"]))
-    return rows
+    unique_keys = work["_key"].nunique()
+    if has_config and "employee_type" in combined.columns:
+        per_person_type = work.groupby("_key")["employee_type"].first()
+        emp_total = int((per_person_type == emp_label).sum())
+        ctr_total = int((per_person_type == ctr_label).sum())
+    else:
+        emp_total = ctr_total = 0
+    return {
+        "total_unique_participants": int(unique_keys),
+        "emp_total": emp_total,
+        "ctr_total": ctr_total,
+    }
 
 
 def _build_payload(meetings: list[dict],
                    participants: pd.DataFrame,
-                   config: dict | None) -> dict:
+                   config: dict | None,
+                   cap_minutes: float) -> dict:
     has_config = config is not None
     cfg_labels = (config or {}).get("labels", {}) if has_config else {}
     org_name = (config or {}).get("org_name", "") if has_config else ""
@@ -243,6 +261,7 @@ def _build_payload(meetings: list[dict],
         "config": {
             "has_org_config": has_config,
             "org_name": org_name,
+            "cap_minutes": int(cap_minutes) if float(cap_minutes).is_integer() else float(cap_minutes),
             "labels": {
                 "employee": emp_label,
                 "contractor": ctr_label,
@@ -250,13 +269,13 @@ def _build_payload(meetings: list[dict],
                 "level_2": cfg_labels.get("level_2", "Sub Org"),
             },
         },
+        "summary": _compute_summary(internal, has_config, emp_label, ctr_label),
         "meetings": meetings_payload,
-        "histogram": _compute_histogram(internal, has_config, emp_label, ctr_label),
+        "histogram": _compute_histogram(internal, has_config, emp_label, ctr_label, cap_minutes),
         "major_org_stack": _compute_major_org_stack(internal, emp_label, ctr_label) if has_config else [],
         "sub_org_by_major": _compute_sub_org_by_major(internal, emp_label, ctr_label) if has_config else {},
         "trend": _compute_trend(meetings_payload),
         "trend_by_major_org": _compute_trend_by_major_org(internal, meetings_payload) if has_config else {"labels": [], "series": {}},
-        "participants": _compute_participant_summary(internal, has_config),
         "palette": {
             "emp": EMP_COLOR,
             "ctr": CTR_COLOR,
@@ -283,14 +302,22 @@ def generate_report(meetings: list[dict],
                     participants: pd.DataFrame,
                     config: dict | None = None,
                     output_path: str | Path = "report.html",
-                    title: str | None = None) -> Path:
+                    title: str | None = None,
+                    cap_minutes: float | None = None) -> Path:
     """Render the dashboard. Returns the output path.
 
     ``participants`` must already include a ``source_file`` column linking
-    each row to a meeting from ``meetings``. The CLI handles this; tests
-    can call ``_combine_participants`` if they have per-file frames.
+    each row to a meeting from ``meetings``. The CLI handles this.
+
+    ``cap_minutes`` controls both the histogram's upper bound and the
+    note shown beneath it. If unset, falls back to ``config['cap_minutes']``
+    (60 if neither is set).
     """
-    payload = _build_payload(meetings, participants, config)
+    if cap_minutes is None:
+        cap_minutes = float((config or {}).get("cap_minutes", DEFAULT_CAP_MINUTES))
+    cap_minutes = float(cap_minutes)
+
+    payload = _build_payload(meetings, participants, config, cap_minutes)
     if title is None:
         org_name = payload["config"]["org_name"]
         title = f"{org_name} Attendance Report" if org_name else DEFAULT_TITLE
@@ -324,6 +351,15 @@ def _escape_html(value: str) -> str:
 # ---------------------------------------------------------------------------
 # HTML template — sentinels (__CHART_JS__, __DATA_JSON__, __TITLE__) are
 # substituted in generate_report(). All CSS and dashboard JS live below.
+#
+# Section order is deliberate:
+#   1. Header (totals, EMP/CTR split, date range)
+#   2. Meetings table
+#   3. By <level_1>            ← org-only
+#   4. Attendance over time
+#   5. Trend by <level_1>      ← org-only
+#   6. <level_1> drilldown     ← org-only
+#   7. Attendance duration histogram (moved to end — secondary signal)
 # ---------------------------------------------------------------------------
 
 _HTML_TEMPLATE = r"""<!DOCTYPE html>
@@ -400,16 +436,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     border-radius: 6px;
     background: white;
   }
-  details > summary {
-    cursor: pointer;
-    font-size: 1.15rem;
-    font-weight: 600;
-    list-style: none;
-    padding: 0.4rem 0;
-  }
-  details > summary::-webkit-details-marker { display: none; }
-  details > summary::before { content: "▶ "; display: inline-block; transition: transform 0.15s; }
-  details[open] > summary::before { transform: rotate(90deg); }
   .note { color: var(--muted); font-size: 0.85rem; margin-top: 0.4rem; }
   body.no-org .org-only { display: none; }
 </style>
@@ -429,24 +455,9 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     </table>
   </section>
 
-  <section id="section-histogram">
-    <h2>Attendance Duration Distribution</h2>
-    <div class="chart-wrap"><canvas id="hist-chart"></canvas></div>
-    <div class="note">Buckets are 5 minutes wide. Values capped at 60 min.</div>
-  </section>
-
   <section id="section-major-stack" class="org-only">
     <h2 id="major-stack-title">By Major Org</h2>
     <div class="chart-wrap"><canvas id="major-stack-chart"></canvas></div>
-  </section>
-
-  <section id="section-drilldown" class="org-only">
-    <h2 id="drilldown-title">Drilldown</h2>
-    <div class="controls">
-      <label for="major-org-picker">Select:</label>
-      <select id="major-org-picker"></select>
-    </div>
-    <div class="chart-wrap"><canvas id="drilldown-chart"></canvas></div>
   </section>
 
   <section id="section-trend">
@@ -460,18 +471,19 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="note">Click a legend entry to toggle that series.</div>
   </section>
 
-  <section id="section-participants">
-    <details>
-      <summary>Participant Detail</summary>
-      <div class="controls">
-        <input type="search" id="participant-search" placeholder="Search by name or org…">
-        <span id="participant-count" class="note"></span>
-      </div>
-      <table class="data" id="participant-table">
-        <thead><tr id="participants-head"></tr></thead>
-        <tbody></tbody>
-      </table>
-    </details>
+  <section id="section-drilldown" class="org-only">
+    <h2 id="drilldown-title">Drilldown</h2>
+    <div class="controls">
+      <label for="major-org-picker">Select:</label>
+      <select id="major-org-picker"></select>
+    </div>
+    <div class="chart-wrap"><canvas id="drilldown-chart"></canvas></div>
+  </section>
+
+  <section id="section-histogram">
+    <h2>Attendance Duration Distribution</h2>
+    <div class="chart-wrap"><canvas id="hist-chart"></canvas></div>
+    <div class="note" id="hist-note"></div>
   </section>
 </main>
 
@@ -481,17 +493,15 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   const DATA = __DATA_JSON__;
   const hasOrg = DATA.config.has_org_config;
   const labels = DATA.config.labels;
+  const cap = DATA.config.cap_minutes;
   const palette = DATA.palette;
 
   if (!hasOrg) document.body.classList.add("no-org");
 
   // ---- Header ----
   const meetings = DATA.meetings;
+  const summary = DATA.summary;
   const dates = meetings.map(m => m.date).filter(Boolean).sort();
-  const totalParticipants = DATA.participants.length;
-  const empTotal = DATA.participants.filter(p => p.employee_type === labels.employee).length;
-  const ctrTotal = DATA.participants.filter(p => p.employee_type === labels.contractor).length;
-  const empCtrTotal = empTotal + ctrTotal;
 
   const subtitleParts = [];
   if (dates.length === 1) subtitleParts.push(dates[0]);
@@ -500,11 +510,13 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   const tiles = [
     { label: "Meetings", value: meetings.length },
-    { label: "Unique participants", value: totalParticipants },
+    { label: "Unique participants", value: summary.total_unique_participants },
   ];
   if (hasOrg) {
-    const empShare = empCtrTotal ? Math.round((empTotal / empCtrTotal) * 100) : 0;
-    tiles.push({ label: `${labels.employee} / ${labels.contractor}`, value: `${empTotal} / ${ctrTotal}` });
+    const empCtrTotal = summary.emp_total + summary.ctr_total;
+    const empShare = empCtrTotal ? Math.round((summary.emp_total / empCtrTotal) * 100) : 0;
+    tiles.push({ label: `${labels.employee} / ${labels.contractor}`,
+                 value: `${summary.emp_total} / ${summary.ctr_total}` });
     tiles.push({ label: `${labels.employee} share`, value: empShare + "%" });
   }
   const tilesEl = document.getElementById("summary-tiles");
@@ -526,7 +538,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         { key: "emp_count", label: labels.employee, numeric: true },
         { key: "ctr_count", label: labels.contractor, numeric: true },
         { key: "avg_attendance_min", label: "Avg (min)", numeric: true },
-        { key: "dropped_external", label: "External Dropped", numeric: true },
       ]
     : [
         { key: "date", label: "Date" },
@@ -537,29 +548,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   renderTable(document.getElementById("meetings-table"), meetingCols, meetings);
 
   // ---- Charts ----
-  const histogramData = DATA.histogram;
-  const histDatasets = hasOrg
-    ? [
-        { label: labels.employee, data: histogramData.EMP, backgroundColor: palette.emp, stack: "stack" },
-        { label: labels.contractor, data: histogramData.CTR, backgroundColor: palette.ctr, stack: "stack" },
-      ]
-    : [
-        { label: "Attendees", data: histogramData.All, backgroundColor: palette.emp },
-      ];
-  new Chart(document.getElementById("hist-chart").getContext("2d"), {
-    type: "bar",
-    data: { labels: histogramData.labels, datasets: histDatasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: hasOrg, title: { display: true, text: "Attendance minutes (capped at 60)" } },
-        y: { stacked: hasOrg, beginAtZero: true, title: { display: true, text: "Participant count" } },
-      },
-      plugins: { legend: { display: hasOrg } },
-    },
-  });
-
   if (hasOrg) {
     // Major-org stacked bar (horizontal)
     document.getElementById("major-stack-title").textContent = `By ${labels.level_1}`;
@@ -580,45 +568,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } },
       },
     });
-
-    // Drilldown
-    document.getElementById("drilldown-title").textContent = `${labels.level_1} Drilldown`;
-    const picker = document.getElementById("major-org-picker");
-    const subOrgData = DATA.sub_org_by_major;
-    const majors = Object.keys(subOrgData);
-    majors.forEach(m => {
-      const opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = m;
-      picker.appendChild(opt);
-    });
-
-    const drillCtx = document.getElementById("drilldown-chart").getContext("2d");
-    let drillChart = null;
-    function renderDrill(major) {
-      const rows = subOrgData[major] || [];
-      if (drillChart) drillChart.destroy();
-      drillChart = new Chart(drillCtx, {
-        type: "bar",
-        data: {
-          labels: rows.map(r => r.sub_org),
-          datasets: [
-            { label: labels.employee, data: rows.map(r => r.EMP), backgroundColor: palette.emp, stack: "s" },
-            { label: labels.contractor, data: rows.map(r => r.CTR), backgroundColor: palette.ctr, stack: "s" },
-          ],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } },
-        },
-      });
-    }
-    if (majors.length) {
-      renderDrill(majors[0]);
-      picker.addEventListener("change", () => renderDrill(picker.value));
-    }
   }
 
   // Attendance trend (stacked bar EMP/CTR per meeting)
@@ -672,48 +621,74 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         scales: { y: { beginAtZero: true, title: { display: true, text: "Attendees" } } },
       },
     });
+
+    // Drilldown
+    document.getElementById("drilldown-title").textContent = `${labels.level_1} Drilldown`;
+    const picker = document.getElementById("major-org-picker");
+    const subOrgData = DATA.sub_org_by_major;
+    const majors = Object.keys(subOrgData);
+    majors.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      picker.appendChild(opt);
+    });
+
+    const drillCtx = document.getElementById("drilldown-chart").getContext("2d");
+    let drillChart = null;
+    function renderDrill(major) {
+      const rows = subOrgData[major] || [];
+      if (drillChart) drillChart.destroy();
+      drillChart = new Chart(drillCtx, {
+        type: "bar",
+        data: {
+          labels: rows.map(r => r.sub_org),
+          datasets: [
+            { label: labels.employee, data: rows.map(r => r.EMP), backgroundColor: palette.emp, stack: "s" },
+            { label: labels.contractor, data: rows.map(r => r.CTR), backgroundColor: palette.ctr, stack: "s" },
+          ],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } },
+        },
+      });
+    }
+    if (majors.length) {
+      renderDrill(majors[0]);
+      picker.addEventListener("change", () => renderDrill(picker.value));
+    }
   }
 
-  // ---- Participant detail table ----
-  const participantCols = hasOrg
+  // Attendance duration histogram (moved to end — secondary signal)
+  const histogramData = DATA.histogram;
+  const histDatasets = hasOrg
     ? [
-        { key: "name", label: "Name" },
-        { key: "org_code", label: "Org Code" },
-        { key: "major_org", label: labels.level_1 },
-        { key: "sub_org", label: labels.level_2 },
-        { key: "employee_type", label: "Type" },
-        { key: "sessions_attended", label: "Sessions", numeric: true },
-        { key: "total_duration_min", label: "Total (min)", numeric: true },
-        { key: "avg_duration_min", label: "Avg (min)", numeric: true },
+        { label: labels.employee, data: histogramData.EMP, backgroundColor: palette.emp, stack: "stack" },
+        { label: labels.contractor, data: histogramData.CTR, backgroundColor: palette.ctr, stack: "stack" },
       ]
     : [
-        { key: "name", label: "Name" },
-        { key: "sessions_attended", label: "Sessions", numeric: true },
-        { key: "total_duration_min", label: "Total (min)", numeric: true },
-        { key: "avg_duration_min", label: "Avg (min)", numeric: true },
+        { label: "Attendees", data: histogramData.All, backgroundColor: palette.emp },
       ];
+  new Chart(document.getElementById("hist-chart").getContext("2d"), {
+    type: "bar",
+    data: { labels: histogramData.labels, datasets: histDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: hasOrg, title: { display: true, text: `Attendance minutes (capped at ${cap})` } },
+        y: { stacked: hasOrg, beginAtZero: true, title: { display: true, text: "Participant count" } },
+      },
+      plugins: { legend: { display: hasOrg } },
+    },
+  });
+  document.getElementById("hist-note").textContent =
+    `Buckets are 5 minutes wide. Values capped at ${cap} min.`;
 
-  // Single source of truth for the search filter: applied on every repaint
-  // (initial render, sort) so the active query survives a re-sort.
-  const search = document.getElementById("participant-search");
-  function applyParticipantSearch() {
-    const q = search.value.toLowerCase();
-    let shown = 0;
-    document.querySelectorAll("#participant-table tbody tr").forEach(row => {
-      const visible = !q || row.textContent.toLowerCase().includes(q);
-      row.hidden = !visible;
-      if (visible) shown += 1;
-    });
-    document.getElementById("participant-count").textContent =
-      q ? `${shown} of ${DATA.participants.length} participants`
-        : `${DATA.participants.length} participants`;
-  }
-  search.addEventListener("input", applyParticipantSearch);
-
-  renderTable(document.getElementById("participant-table"), participantCols,
-              DATA.participants, applyParticipantSearch);
-
-  // ---- Table helpers ----
+  // ---- Table helpers (used by the meetings table) ----
   function paintRows(table, columns, rows) {
     const tbody = table.tBodies[0];
     tbody.innerHTML = "";
@@ -730,20 +705,19 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     });
   }
 
-  function renderTable(table, columns, rows, afterRender) {
+  function renderTable(table, columns, rows) {
     const thead = table.tHead.querySelector("tr");
     thead.innerHTML = "";
     columns.forEach((c, idx) => {
       const th = document.createElement("th");
       th.textContent = c.label;
-      th.addEventListener("click", () => sortBy(table, columns, rows, idx, c, afterRender));
+      th.addEventListener("click", () => sortBy(table, columns, rows, idx, c));
       thead.appendChild(th);
     });
     paintRows(table, columns, rows);
-    if (afterRender) afterRender();
   }
 
-  function sortBy(table, columns, rows, idx, col, afterRender) {
+  function sortBy(table, columns, rows, idx, col) {
     const thead = table.tHead.querySelector("tr");
     const th = thead.children[idx];
     const current = th.dataset.sort;
@@ -758,7 +732,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       return String(av || "").localeCompare(String(bv || "")) * direction;
     });
     paintRows(table, columns, sorted);
-    if (afterRender) afterRender();
   }
 })();
 </script>

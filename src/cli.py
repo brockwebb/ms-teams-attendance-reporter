@@ -93,7 +93,8 @@ def main(argv: list[str] | None = None) -> int:
                 else pd.DataFrame())
 
     out_path = generate_report(meetings, combined, config=config,
-                               output_path=args.output, title=args.title)
+                               output_path=args.output, title=args.title,
+                               cap_minutes=cap_minutes)
     print(f"\nReport written to: {out_path} ({out_path.stat().st_size:,} bytes)")
     if unmapped_total:
         print(f"\nUnmapped org codes (consider adding to config): {sorted(unmapped_total)}",
