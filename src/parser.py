@@ -49,8 +49,23 @@ def _detect_delimiter(line: str) -> str:
 
 
 def _read_lines(filepath: Path) -> list[str]:
-    # utf-8-sig strips the BOM Teams sometimes prepends
-    with open(filepath, "r", encoding="utf-8-sig") as f:
+    """Read lines from a Teams CSV, handling encoding variations.
+
+    Teams exports vary by platform:
+      - UTF-8 with BOM (utf-8-sig) — most common on web/Mac
+      - UTF-16 LE with BOM — sometimes seen on Windows desktop
+    Try utf-8-sig first; on failure, fall back to utf-16. As a final
+    safety net, latin-1 accepts any byte sequence so the tool can't
+    hard-crash on a surprise encoding — the user will see garbled names
+    in the report and know something's off.
+    """
+    for encoding in ("utf-8-sig", "utf-16"):
+        try:
+            with open(filepath, "r", encoding=encoding) as f:
+                return f.readlines()
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+    with open(filepath, "r", encoding="latin-1") as f:
         return f.readlines()
 
 
