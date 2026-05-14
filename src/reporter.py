@@ -29,6 +29,7 @@ each time a filter changes.
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 from typing import Iterable
@@ -280,6 +281,51 @@ def generate_report(meetings: list[dict],
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
+    return out
+
+
+def export_csv(meetings: list[dict],
+               participants: pd.DataFrame,
+               config: dict | None = None,
+               output_path: str | Path = "output/data.csv",
+               cap_minutes: float | None = None) -> Path:
+    """Write a flat (meeting × participant) CSV. No names/PII.
+
+    Reuses ``_build_payload`` so the CSV row set is byte-for-byte the
+    same population the HTML dashboard renders — same filter (internal
+    only when org config is present), same cap, same pid assignment.
+    """
+    if cap_minutes is None:
+        cap_minutes = float((config or {}).get("cap_minutes", DEFAULT_CAP_MINUTES))
+
+    payload = _build_payload(meetings, participants, config, float(cap_minutes))
+    meta_lookup = {m["source_file"]: m for m in payload["meetings"]}
+
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    fieldnames = [
+        "meeting_date", "meeting_title", "meeting_duration_min",
+        "source_file", "employee_type", "major_org", "sub_org",
+        "attendance_minutes", "pid",
+    ]
+
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in payload["rows"]:
+            meta = meta_lookup.get(row["source_file"], {})
+            writer.writerow({
+                "meeting_date": meta.get("date", ""),
+                "meeting_title": meta.get("meeting_title", ""),
+                "meeting_duration_min": meta.get("duration_min", ""),
+                "source_file": row["source_file"],
+                "employee_type": row.get("employee_type") or "",
+                "major_org": row.get("major_org") or "",
+                "sub_org": row.get("sub_org") or "",
+                "attendance_minutes": row["minutes"],
+                "pid": row["pid"],
+            })
     return out
 
 
@@ -820,7 +866,10 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       options: {
         indexAxis: "y",
         responsive: true, maintainAspectRatio: false,
-        scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } },
+        scales: {
+          x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+          y: { stacked: true },
+        },
       },
     });
   }
@@ -856,7 +905,12 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         responsive: true, maintainAspectRatio: false,
         scales: {
           x: { stacked: hasOrg },
-          y: { stacked: hasOrg, beginAtZero: true, title: { display: true, text: "Attendees" } },
+          y: {
+            stacked: hasOrg,
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: "Attendees" },
+          },
         },
         plugins: {
           legend: { display: hasOrg },
@@ -904,7 +958,13 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: "top" } },
-        scales: { y: { beginAtZero: true, title: { display: true, text: "Attendees" } } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: "Attendees" },
+          },
+        },
       },
     });
   }
@@ -957,7 +1017,10 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         options: {
           indexAxis: "y",
           responsive: true, maintainAspectRatio: false,
-          scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } },
+          scales: {
+            x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+            y: { stacked: true },
+          },
         },
       });
     }
@@ -985,7 +1048,12 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         responsive: true, maintainAspectRatio: false,
         scales: {
           x: { stacked: hasOrg, title: { display: true, text: `Attendance minutes (capped at ${cap})` } },
-          y: { stacked: hasOrg, beginAtZero: true, title: { display: true, text: "Participant count" } },
+          y: {
+            stacked: hasOrg,
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: "Participant count" },
+          },
         },
         plugins: { legend: { display: hasOrg } },
       },
