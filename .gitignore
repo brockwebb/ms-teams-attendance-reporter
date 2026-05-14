@@ -55,6 +55,9 @@ cc_tasks/
 # =============================================================================
 # OTHER
 # =============================================================================
+
+# Real org configs (contain org-specific structure, keep out of repo)
+config/config-census.yaml
 .pytest_cache/
 .coverage
 htmlcov/
