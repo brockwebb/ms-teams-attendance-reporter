@@ -97,9 +97,18 @@ def load_org_config(config_path) -> dict:
         for code in info.get("direct_codes", []) or []:
             code_to_major[code] = major
             code_to_sub[code] = None
-        for code in info.get("sub_orgs", []) or []:
-            code_to_major[code] = major
-            code_to_sub[code] = code
+        for entry in info.get("sub_orgs", []) or []:
+            # sub_orgs entries are either:
+            #   - "CODE"           → code is its own sub_org display name
+            #   - {CODE: PARENT}   → CODE rolls up under PARENT in reports
+            #                        (raw org_code is preserved on the row)
+            if isinstance(entry, dict):
+                for code, parent in entry.items():
+                    code_to_major[code] = major
+                    code_to_sub[code] = parent
+            else:
+                code_to_major[entry] = major
+                code_to_sub[entry] = entry
     cfg["_code_to_major"] = code_to_major
     cfg["_code_to_sub"] = code_to_sub
     return cfg

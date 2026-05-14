@@ -24,10 +24,20 @@ cap_minutes: 60
 
 # Map org codes to major/sub hierarchy. direct_codes belong to the major
 # org itself; sub_orgs roll up under it. Unlisted codes show as UNMAPPED.
+#
+# sub_orgs entries can be:
+#   - CODE            → appears as its own division in reports
+#   - {CODE: PARENT}  → CODE rolls up under PARENT in reports
+#                       (use when a sub-office belongs to a named division
+#                        but doesn't need its own chart slice; the raw
+#                        org_code is still preserved on each row)
 org_mapping:
   MAJOR_ORG_A:
     direct_codes: [MAJA]
-    sub_orgs: [SUB1, SUB2]
+    sub_orgs:
+      - SUB1
+      - SUB2
+      - SUB1A: SUB1   # SUB1A attendance rolls up under SUB1
 
   MAJOR_ORG_B:
     direct_codes: [MAJB]
