@@ -103,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
 
     meetings: list[dict] = []
     enriched_frames = []
-    unmapped_total: set[str] = set()
+    unmapped_details: dict[str, dict] = {}  # code → {count, example}
 
     for path in csv_files:
         result = parse_teams_csv(path)
@@ -111,7 +111,13 @@ def main(argv: list[str] | None = None) -> int:
         df = result["participants"]
         if config is not None and not df.empty:
             df, unmapped = enrich_participants(df, config, cap_minutes=cap_minutes)
-            unmapped_total.update(unmapped)
+            for code in unmapped:
+                if code not in unmapped_details:
+                    example_rows = df[df["org_code"] == code]
+                    example_name = (example_rows.iloc[0]["Name"]
+                                    if not example_rows.empty else "?")
+                    unmapped_details[code] = {"count": 0, "example": example_name}
+                unmapped_details[code]["count"] += int((df["org_code"] == code).sum())
         if not df.empty:
             df = df.copy()
             df["source_file"] = meta.get("source_file", path.name)
@@ -134,9 +140,24 @@ def main(argv: list[str] | None = None) -> int:
                           output_path=csv_target, cap_minutes=cap_minutes)
     print(f"\nReport written to: {out_path} ({out_path.stat().st_size:,} bytes)")
     print(f"CSV data written to: {csv_path} ({csv_path.stat().st_size:,} bytes)")
-    if unmapped_total:
-        print(f"\nUnmapped org codes (consider adding to config): {sorted(unmapped_total)}",
+    if unmapped_details:
+        bar = "=" * 60
+        print("\n" + bar, file=sys.stderr)
+        print("UNMAPPED ORG CODES", file=sys.stderr)
+        print("These codes appeared in the data but aren't in your config.",
               file=sys.stderr)
+        print(bar, file=sys.stderr)
+        for code in sorted(unmapped_details):
+            info = unmapped_details[code]
+            print(f"  {code:12s}  ({info['count']} occurrence(s))  e.g. {info['example']}",
+                  file=sys.stderr)
+        print("\nTo fix, add each code to the appropriate section in your config:",
+              file=sys.stderr)
+        print("  org_mapping:", file=sys.stderr)
+        print("    EXISTING_MAJOR_ORG:", file=sys.stderr)
+        print(f"      sub_orgs: [{', '.join(sorted(unmapped_details))}]",
+              file=sys.stderr)
+        print(bar, file=sys.stderr)
     return 0
 
 

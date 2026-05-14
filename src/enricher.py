@@ -155,8 +155,13 @@ def enrich_participants(
 
     unmapped: set[str] = set()
 
+    def _is_missing(code):
+        # Pandas coerces None → NaN in mixed-type Series, so a plain
+        # ``code is None`` check misses externals after a column round-trip.
+        return code is None or (isinstance(code, float) and pd.isna(code))
+
     def map_major(code):
-        if code is None:
+        if _is_missing(code):
             return None
         if code in code_to_major:
             return code_to_major[code]
@@ -164,7 +169,7 @@ def enrich_participants(
         return "UNMAPPED"
 
     def map_sub(code):
-        if code is None:
+        if _is_missing(code):
             return None
         # Unknown codes carry their own code as sub_org so the report still
         # shows something identifiable.

@@ -8,6 +8,10 @@ trend charts across meetings.
 No server, no Excel, no dependencies beyond pandas and pyyaml. One command
 produces a single HTML file you open in a browser.
 
+For a preview without running anything, open
+[`sample_report.html`](sample_report.html) — a checked-in dashboard built
+from the synthetic ACNE Corp fixture.
+
 ## Quick Start
 
 ```bash
