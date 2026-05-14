@@ -867,7 +867,9 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         total_attendees: rs.length,
         emp_count: countByType(rs, labels.employee),
         ctr_count: countByType(rs, labels.contractor),
-        avg_attendance_min: m.avg_attendance_min,
+        avg_attendance_min: rs.length > 0
+          ? Math.round(rs.reduce((sum, r) => sum + r.minutes, 0) / rs.length * 10) / 10
+          : 0,
       };
     });
     setEmpty('section-meetings', tableRows.length === 0);
