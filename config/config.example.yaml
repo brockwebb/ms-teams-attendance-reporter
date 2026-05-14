@@ -6,6 +6,11 @@
 # Organization name — appears in the report header and page title.
 org_name: "Your Org Name"
 
+# Optional. Sets the report's <title> and <h1>. If omitted, the title
+# falls back to "{org_name} Attendance Report". The CLI --title flag
+# overrides this.
+# report_title: "MS Copilot Training Report"
+
 # Regex applied to the Teams display-name field. Must define exactly THREE
 # capture groups: (1) clean name, (2) org code, (3) employee type.
 # Set to null to run in generic mode (no org classification).

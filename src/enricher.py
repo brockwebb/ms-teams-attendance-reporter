@@ -47,12 +47,17 @@ def _normalize_config(raw: dict, source: str) -> dict:
         cap_minutes = 60.0
     cap_minutes = float(cap_minutes)
 
+    report_title = raw.get("report_title")
+    if report_title is not None:
+        report_title = str(report_title).strip() or None
+
     return {
         "org_name": str(raw.get("org_name", "")),
         "name_pattern": str(name_pattern),
         "labels": labels,
         "cap_minutes": cap_minutes,
         "org_mapping": org_mapping,
+        "report_title": report_title,
     }
 
 
@@ -60,9 +65,10 @@ def load_org_config(config_path) -> dict:
     """Load an org config (YAML or JSON) and pre-compile lookups.
 
     The returned dict has a canonical shape — ``org_name``, ``name_pattern``,
-    ``labels``, ``cap_minutes``, ``org_mapping`` — plus three derived keys
-    used by the enricher itself: ``_compiled_pattern``, ``_code_to_major``,
-    ``_code_to_sub`` (None for direct codes).
+    ``labels``, ``cap_minutes``, ``org_mapping``, ``report_title`` (optional,
+    may be None) — plus three derived keys used by the enricher itself:
+    ``_compiled_pattern``, ``_code_to_major``, ``_code_to_sub`` (None for
+    direct codes).
     """
     path = Path(config_path)
     suffix = path.suffix.lower()

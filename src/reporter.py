@@ -263,6 +263,8 @@ def generate_report(meetings: list[dict],
 
     payload = _build_payload(meetings, participants, config, cap_minutes)
     if title is None:
+        title = (config or {}).get("report_title") or None
+    if title is None:
         org_name = payload["config"]["org_name"]
         title = f"{org_name} Attendance Report" if org_name else DEFAULT_TITLE
     payload["title"] = title
