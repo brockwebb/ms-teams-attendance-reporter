@@ -519,6 +519,11 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <span id="filter-division-label">Division</span>
     <select id="filter-division"></select>
   </label>
+  <label>
+    Min. attendance
+    <input id="filter-min-minutes" type="number" min="0" max="60" value="0" step="1" style="width:70px;">
+    <span style="font-size:0.85rem;color:var(--muted);">min</span>
+  </label>
   <button id="filter-reset" type="button">Reset</button>
 </div>
 
@@ -561,6 +566,12 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="chart-wrap"><canvas id="hist-chart"></canvas></div>
     <div class="note" id="hist-note"></div>
   </section>
+
+  <section id="section-fleeting" class="org-only" style="display:none;">
+    <h2>Fleeting Attendees</h2>
+    <div class="note" id="fleeting-note"></div>
+    <div class="chart-wrap"><canvas id="fleeting-chart"></canvas></div>
+  </section>
 </main>
 
 <script>__CHART_JS__</script>
@@ -582,7 +593,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   if (!hasOrg) document.body.classList.add("no-org");
 
   // ---- State + chart instance registry (so we can destroy on redraw) ----
-  const state = { meeting: 'ALL', directorate: 'ALL', division: 'ALL' };
+  const state = { meeting: 'ALL', directorate: 'ALL', division: 'ALL', minMinutes: 0 };
   const chartInstances = {};
 
   // ---- Page subtitle: full date range, immutable ----
@@ -678,9 +689,16 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
       redraw();
     });
   }
+  const minMinInput = document.getElementById('filter-min-minutes');
+  minMinInput.addEventListener('change', e => {
+    state.minMinutes = Math.max(0, parseInt(e.target.value) || 0);
+    redraw();
+  });
   document.getElementById('filter-reset').addEventListener('click', () => {
     state.meeting = 'ALL'; state.directorate = 'ALL'; state.division = 'ALL';
+    state.minMinutes = 0;
     sel.meeting.value = 'ALL';
+    minMinInput.value = 0;
     if (hasOrg) {
       sel.directorate.value = 'ALL';
       populateDivisionFilter();
@@ -701,7 +719,23 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
           return false;
         }
       }
+      if (st.minMinutes > 0 && r.minutes < st.minMinutes) return false;
       return true;
+    });
+  }
+  function getExcludedRows(rows, st) {
+    if (st.minMinutes <= 0) return [];
+    return rows.filter(r => {
+      if (st.meeting !== 'ALL' && r.source_file !== st.meeting) return false;
+      if (st.directorate !== 'ALL' && r.major_org !== st.directorate) return false;
+      if (st.division !== 'ALL') {
+        if (st.division === '(direct)') {
+          if (r.sub_org) return false;
+        } else if (r.sub_org !== st.division) {
+          return false;
+        }
+      }
+      return r.minutes < st.minMinutes;
     });
   }
   function uniquePids(rows) {
@@ -990,7 +1024,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     });
     const initial = (state.directorate !== 'ALL' && dirsArray.includes(state.directorate))
       ? state.directorate : dirsArray[0];
-    picker.value = initial;
 
     function paint(major) {
       const subRows = rows.filter(r => r.major_org === major);
@@ -1024,7 +1057,16 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
         },
       });
     }
-    paint(initial);
+
+    if (state.directorate !== 'ALL') {
+      picker.value = state.directorate;
+      picker.disabled = true;
+      paint(state.directorate);
+    } else {
+      picker.disabled = false;
+      picker.value = initial;
+      paint(initial);
+    }
     picker.onchange = (e) => paint(e.target.value);
   }
 
@@ -1107,9 +1149,51 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     paintRows(table, columns, sorted);
   }
 
+  function renderFleetingBirds(excludedRows) {
+    const section = document.getElementById('section-fleeting');
+    if (!section) return;
+    if (excludedRows.length === 0) {
+      section.style.display = 'none';
+      destroyChart('fleeting-chart');
+      return;
+    }
+    section.style.display = '';
+    const noteEl = document.getElementById('fleeting-note');
+    const uniqueExcluded = uniquePids(excludedRows);
+    noteEl.textContent = `${excludedRows.length} attendance records (${uniqueExcluded} unique participants) below the ${state.minMinutes}-minute threshold.`;
+
+    const grouped = groupBy(excludedRows, 'major_org');
+    const items = Object.entries(grouped).map(([org, rs]) => ({
+      major_org: org,
+      EMP: countByType(rs, labels.employee),
+      CTR: countByType(rs, labels.contractor),
+      total: rs.length,
+    })).sort((a, b) => b.total - a.total);
+
+    ensureChart('fleeting-chart', {
+      type: 'bar',
+      data: {
+        labels: items.map(r => r.major_org),
+        datasets: [
+          { label: labels.employee, data: items.map(r => r.EMP), backgroundColor: palette.emp, stack: 's' },
+          { label: labels.contractor, data: items.map(r => r.CTR), backgroundColor: palette.ctr, stack: 's' },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+          y: { stacked: true },
+        },
+      },
+    });
+  }
+
   // ---- Master redraw ----
   function redraw() {
     const rows = filterRows(DATA.rows, state);
+    const excluded = getExcludedRows(DATA.rows, state);
     renderHeaderTiles(rows);
     renderMeetingsTable(rows);
     renderMajorStack(rows);
@@ -1117,6 +1201,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     renderTrendByOrg(rows);
     renderDrilldown(rows);
     renderHistogram(rows);
+    renderFleetingBirds(excluded);
   }
   redraw();
 })();
