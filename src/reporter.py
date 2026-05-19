@@ -18,9 +18,9 @@ into the page. Each row is one (meeting × participant) attendance fact:
 
   {pid, source_file, major_org, sub_org, employee_type, minutes}
 
-``pid`` is a sequential integer assigned by Python — used to dedup
-participants across meetings without exposing names. No names, emails,
-or other PII appear anywhere in the rendered HTML.
+``pid`` is a deterministic hash of the participant's email address —
+stable across runs and sessions, enabling cross-session dedup. No
+names, emails, or other PII appear anywhere in the rendered HTML.
 
 The JS reads ``DATA.rows``, applies the active filter state, and
 recomputes the meeting table, all charts, and the summary KPI tiles
@@ -30,6 +30,7 @@ each time a filter changes.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 from typing import Iterable
@@ -89,14 +90,31 @@ def _safe_float(value) -> float:
 
 
 def _identity_key_series(internal: pd.DataFrame, has_config: bool) -> pd.Series:
-    """The series used to dedup unique participants in the JS payload.
+    """Stable identity key derived from email address.
 
-    Uses ``clean_name`` after enrichment, falls back to ``Name``. Never
-    leaves Python — only the integer ``pid`` derived from it ships.
+    Uses Email when available (preferred — stable across sessions),
+    falls back to clean_name or Name. The key is used to build a
+    deterministic pid via hashing, so the same person gets the same
+    pid regardless of file order or run.
     """
     if has_config and "clean_name" in internal.columns:
-        return internal["clean_name"].fillna(internal["Name"]).astype(str)
-    return internal["Name"].astype(str)
+        fallback = internal["clean_name"].fillna(internal["Name"]).astype(str)
+    else:
+        fallback = internal["Name"].astype(str)
+    if "Email" in internal.columns:
+        email = internal["Email"].astype(str).str.strip().str.lower()
+        return email.where(email.ne("") & email.ne("nan"), fallback)
+    return fallback
+
+
+def _hash_pid(key: str) -> int:
+    """Deterministic integer pid from a string key.
+
+    SHA-256 truncated to 48 bits — fits in JS Number.MAX_SAFE_INTEGER
+    (2^53 - 1) with collision probability ~negligible at the scale of
+    this tool (thousands of participants, not billions).
+    """
+    return int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:12], 16)
 
 
 def _build_rows(internal: pd.DataFrame, has_config: bool) -> list[dict]:
@@ -109,11 +127,11 @@ def _build_rows(internal: pd.DataFrame, has_config: bool) -> list[dict]:
     if internal.empty:
         return []
     key_series = _identity_key_series(internal, has_config)
-    # First-seen order assigns pids; the mapping never leaves Python.
+    # Deterministic hash → same person gets the same pid across runs/sessions.
     pid_map: dict[str, int] = {}
     for k in key_series:
         if k not in pid_map:
-            pid_map[k] = len(pid_map)
+            pid_map[k] = _hash_pid(k)
 
     mins_col = (
         "attendance_minutes_capped"
@@ -351,7 +369,9 @@ def _escape_html(value: str) -> str:
 #   5. Attendance over time
 #   6. Trend by <level_1>      ← org-only
 #   7. <level_1> drilldown     ← org-only
-#   8. Attendance duration histogram (last — secondary signal)
+#   8. Attendance duration histogram
+#   9. Repeat attendance       ← needs 2+ meetings to be useful
+#  10. Fleeting attendees      ← org-only, shown only when threshold filter excludes rows
 # ---------------------------------------------------------------------------
 
 _HTML_TEMPLATE = r"""<!DOCTYPE html>
@@ -567,6 +587,13 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <h2>Attendance Duration Distribution</h2>
     <div class="chart-wrap"><canvas id="hist-chart"></canvas></div>
     <div class="note" id="hist-note"></div>
+  </section>
+
+  <section id="section-multi-session">
+    <h2>Repeat Attendance</h2>
+    <div class="note" id="multi-session-note" style="display:none;"></div>
+    <div class="summary-tiles" id="multi-session-tiles"></div>
+    <div class="chart-wrap"><canvas id="multi-session-chart"></canvas></div>
   </section>
 
   <section id="section-fleeting" class="org-only" style="display:none;">
@@ -1194,6 +1221,96 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     });
   }
 
+  function renderMultiSession(rows) {
+    const meetingCount = DATA.meetings.length;
+    const section = document.getElementById('section-multi-session');
+    const noteEl = document.getElementById('multi-session-note');
+    const tilesEl = document.getElementById('multi-session-tiles');
+    const chartWrap = section.querySelector('.chart-wrap');
+
+    // Single meeting: explain why the section is inert, hide chart/tiles.
+    if (meetingCount <= 1) {
+      noteEl.textContent = 'Multi-session analysis requires 2+ meetings loaded.';
+      noteEl.style.display = '';
+      tilesEl.innerHTML = '';
+      chartWrap.style.display = 'none';
+      destroyChart('multi-session-chart');
+      return;
+    }
+    noteEl.style.display = 'none';
+    chartWrap.style.display = '';
+
+    // Group by pid → set of source_files attended.
+    const pidSessions = {};
+    rows.forEach(r => {
+      if (!pidSessions[r.pid]) pidSessions[r.pid] = { files: new Set(), type: r.employee_type };
+      pidSessions[r.pid].files.add(r.source_file);
+    });
+
+    // Histogram: for each session count (1..meetingCount), how many pids.
+    const empBuckets = new Array(meetingCount).fill(0);
+    const ctrBuckets = new Array(meetingCount).fill(0);
+    const allBuckets = new Array(meetingCount).fill(0);
+    let totalUnique = 0;
+    Object.values(pidSessions).forEach(p => {
+      const idx = p.files.size - 1;
+      allBuckets[idx]++;
+      if (p.type === labels.employee) empBuckets[idx]++;
+      else if (p.type === labels.contractor) ctrBuckets[idx]++;
+      totalUnique++;
+    });
+
+    // Summary tiles.
+    const allSessions = allBuckets[meetingCount - 1];
+    const multiCount = allBuckets.reduce((sum, v, i) => i > 0 ? sum + v : sum, 0);
+    const tiles = [
+      { label: 'Sessions Loaded', value: meetingCount },
+      { label: 'Total Records', value: rows.length },
+      { label: 'Unique Participants', value: totalUnique },
+      { label: 'Attended 2+', value: multiCount },
+      { label: 'All Sessions', value: allSessions },
+    ];
+    tilesEl.innerHTML = '';
+    tiles.forEach(t => {
+      const div = document.createElement('div'); div.className = 'tile';
+      const v = document.createElement('div'); v.className = 'value'; v.textContent = t.value;
+      const l = document.createElement('div'); l.className = 'label'; l.textContent = t.label;
+      div.appendChild(v); div.appendChild(l);
+      tilesEl.appendChild(div);
+    });
+
+    const barLabels = [];
+    for (let i = 1; i <= meetingCount; i++) barLabels.push(i.toString());
+
+    const datasets = hasOrg
+      ? [
+          { label: labels.employee, data: empBuckets, backgroundColor: palette.emp, stack: 's' },
+          { label: labels.contractor, data: ctrBuckets, backgroundColor: palette.ctr, stack: 's' },
+        ]
+      : [{ label: 'Participants', data: allBuckets, backgroundColor: palette.emp }];
+
+    ensureChart('multi-session-chart', {
+      type: 'bar',
+      data: { labels: barLabels, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'Participants by Number of Sessions Attended' },
+          legend: { display: hasOrg },
+        },
+        scales: {
+          x: { stacked: hasOrg, title: { display: true, text: 'Sessions Attended' } },
+          y: {
+            stacked: hasOrg,
+            beginAtZero: true,
+            title: { display: true, text: 'Participants' },
+            ticks: { stepSize: 1, callback: v => Number.isInteger(v) ? v : '' },
+          },
+        },
+      },
+    });
+  }
+
   // ---- Master redraw ----
   function redraw() {
     const rows = filterRows(DATA.rows, state);
@@ -1206,6 +1323,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     renderDrilldown(rows);
     renderHistogram(rows);
     renderFleetingBirds(excluded);
+    renderMultiSession(rows);
   }
   redraw();
 })();
