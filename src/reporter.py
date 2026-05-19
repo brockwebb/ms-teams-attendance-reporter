@@ -223,12 +223,14 @@ def _build_payload(meetings: list[dict],
     rows = _build_rows(internal, has_config)
     meetings_meta = _build_meetings_meta(meetings)
     cap_repr = int(cap_minutes) if float(cap_minutes).is_integer() else float(cap_minutes)
+    min_att_default = max(0, int((config or {}).get("min_attendance_minutes", 0) or 0))
 
     return {
         "config": {
             "has_org_config": has_config,
             "org_name": org_name,
             "cap_minutes": cap_repr,
+            "min_attendance_default": min_att_default,
             "labels": {
                 "employee": cfg_labels.get("employee", "EMP"),
                 "contractor": cfg_labels.get("contractor", "CTR"),
@@ -622,7 +624,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   if (!hasOrg) document.body.classList.add("no-org");
 
   // ---- State + chart instance registry (so we can destroy on redraw) ----
-  const state = { meeting: 'ALL', directorate: 'ALL', division: 'ALL', minMinutes: 0 };
+  const minAttDefault = Math.max(0, parseInt(DATA.config.min_attendance_default) || 0);
+  const state = { meeting: 'ALL', directorate: 'ALL', division: 'ALL', minMinutes: minAttDefault };
   const chartInstances = {};
 
   // ---- Page subtitle: full date range, immutable ----
@@ -719,15 +722,16 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     });
   }
   const minMinInput = document.getElementById('filter-min-minutes');
+  minMinInput.value = state.minMinutes;
   minMinInput.addEventListener('change', e => {
     state.minMinutes = Math.max(0, parseInt(e.target.value) || 0);
     redraw();
   });
   document.getElementById('filter-reset').addEventListener('click', () => {
     state.meeting = 'ALL'; state.directorate = 'ALL'; state.division = 'ALL';
-    state.minMinutes = 0;
+    state.minMinutes = minAttDefault;
     sel.meeting.value = 'ALL';
-    minMinInput.value = 0;
+    minMinInput.value = minAttDefault;
     if (hasOrg) {
       sel.directorate.value = 'ALL';
       populateDivisionFilter();

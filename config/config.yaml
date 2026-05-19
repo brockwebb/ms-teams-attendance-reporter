@@ -51,6 +51,12 @@ labels:
 # --cap-minutes flag overrides this.
 cap_minutes: 60
 
+# Default minimum attendance threshold (minutes). Participants below
+# this are excluded from main charts and surface in "Fleeting Attendees".
+# The dashboard filter still lets users adjust at runtime; this just
+# sets the initial value. Default: 0.
+min_attendance_minutes: 0
+
 # ---------------------------------------------------------------------------
 # Org Hierarchy
 # ---------------------------------------------------------------------------
